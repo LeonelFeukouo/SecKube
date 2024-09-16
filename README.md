@@ -114,14 +114,22 @@
         - #### 3.1.1 Mise en place de l'architecture initiale (Master et Workers)
             L'architecture initiale que nous allons déployer se presente comme suit dans l'image suivante :
 
-            ![Image 1](./images/)
+            ![Architecture des machines](./images/Architecture_des_machines.png)
 
             Nous trouvons ci-dessous un guide étape par étape sur l'installation et la configuration de la version 1.23.7 de Kubernetes pour les nœuds maître (master) et travailleurs (worker1 & worker2).
 
             **PRÉ-REQUIS DANS LES TROIS MACHINES** :
-            - Ubuntu 22.04
-            - Swap désactivé
-            - Docker v20.10 installé
+            - Ubuntu 22.04, à telecharger sur le site officiel d'Ubuntu.
+
+                https://ubuntu.com/download/desktop
+
+            - Swap désactivé, à l'aide de la commande suivante :
+
+                    sudo swapoff -a && sudo sed -i '/ swap /s/^/#/' /etc/fstab
+
+            - Docker v20.10 installé, à l'aide du script suivant :
+
+                    https://github.com/rancher/install-docker/blob/master/dist/20.10.10.sh
 
             **NOEUD MASTER** :
 
@@ -134,17 +142,17 @@
 
             https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG
 
-            - Trouver la version requise de k8s. Dans notre cas, il s'agit de :
+            - Trouver la version requise de k8s. Dans notre cas, il s'agit de 1.23 :
 
-            ![Image 2](./images/)
+            ![Kubernetes version](./images/K8S_version.png)
 
-            - Cliquer sur le lien "Server Binaries" dans la section "Download for ...".
+            - Cliquer sur le lien "Server Binaries" dans la section "Download for ..." de la version 1.23.7.
 
-            ![Image 3](./images/)
+            ![Kubernetes binaries](./images/K8S_binaries.png)
             
             - Télécharger les binaires pour l'architecture de votre processeur. Dans notre cas, pour amd64 :
 
-            ![Image 4](./images/)
+            ![Kubernetes download](./images/K8S_download.png)
             
                 wget https://dl.k8s.io/v1.23.7/kubernetes-server-linux-amd64.tar.gz
 
@@ -163,10 +171,7 @@
                     [Service]
                     Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
                     Environment="KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml"
-                    # This is a file that "kubeadm init" and "kubeadm join" generates at runtime, populating the KUBELET_KUBEADM_ARGS variable dynamically
                     EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env
-                    # This is a file that the user can use for overrides of the kubelet args as a last resort. Preferably, the user should use
-                    # the .NodeRegistration.KubeletExtraArgs object in the configuration files instead. KUBELET_EXTRA_ARGS should be sourced from this file.
                     EnvironmentFile=-/etc/default/kubelet
                     ExecStart=
                     ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS
