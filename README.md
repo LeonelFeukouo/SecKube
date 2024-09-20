@@ -167,9 +167,11 @@
             - Configurer kubelet en tant qu'unité de service :
 
                 Créer le fichier **/etc/systemd/system/kubelet.service.d/10-kubeadm.conf** avec le contenu suivant :
+
                 ![Kubeadm](./images/10-kubeadm.png)
 
-                Créer un autre fichier **/usr/lib/systemd/system/kubelet.service** avec le contenu suivant à l'intérieur.
+                Créer un autre fichier **/usr/lib/systemd/system/kubelet.service** avec le contenu suivant à l'intérieur :
+
                 ![Kubelet](./images/kubelet.png)
 
                 Démarrer et activer kubelet.service :
@@ -216,6 +218,7 @@
                 Tout d'abord, nous configurons le namespace **deploy**. Cela créera le namespace et liera tous les comptes de service de cet espace de noms à la politique de sécurité restreinte du pod.
                 
                 Le contenu du fichier est le suivant:
+
                 ![Namespace Deploy](./images/NS_deploy.png)
 
                 La commande suivante permet de créer le namespace deploy :
@@ -229,6 +232,7 @@
                 Ensuite, nous créons le compte de service (Service Account) **wordpress** dans le namespace de deploiement. Cela introduira également une vulnérabilité dans la mesure où nous autoriserons ce compte de service à effectuer une grande variété d'actions au sein de l'espace de noms spécifique. Il s'agit d'une hypothèse assez courante mais, comme nous le montrerons, elle peut permettre à un attaquant d'élargir le rayon d'action d'un exploit.
 
                 Le contenu du fichier est le suivant :
+
                 ![SA wordpress](./images/SA_wordpress.png)
 
                 La commande suivante permet de créer le compte de service **wordpress**, ainsi que le role **allow_pod_read** permettant d'effectuer une variété d'actions:
@@ -242,6 +246,7 @@
                 Ensuite, nous introduisons une deuxième vulnérabilité, permettant à cet utilisateur (SA) d'interroger les points d'extrémité du serveur API. Là encore, il ne s'agit pas nécessairement d'un problème évident, mais cela permettra à un attaquant d'obtenir des informations supplémentaires sur le cluster.
 
                 Le contenu du fichier est le suivant:
+
                 ![Allow Endpoints](./images/Allow_endpoints.png)
 
                 La commande suivante permet, comme defini dans le fichier precedent, de créer un nouveau role **allow_endpoint_access** et le lier au compte de service **wordpress**.
@@ -253,6 +258,7 @@
                 Nous allons maintenant déployer l'application vulnérable dans le namespace deploy sécurisé.
 
                 Le contenu du fichier est le suivant:
+
                 ![Wordpress Deployment](./images/Wordpress_deployment.png)
 
                 La commande suivante permet d'appliquer le fichier precedent et créer le deploiement dans le namespace sécurisé.
@@ -275,11 +281,22 @@
 
                 ![Accueil wordpress](./images/Accueil_wordpress.png)
 
+                Maintenant, nous devons modifier le namespace deploy, afin de mettre le label sur **restricted**.
+                
+                    kubectl edit ns deploy
+
+                ![](./images/Edit_ns_deploy.png)
+
+                ![](./images/Edit_ns_deploy_cmd.png)
+
+                Nous pouvons constater un **AVERTISSEMENT**, sur le fait qu'un pod ne respecte pas la politique de securite du namespace deploy, ce qui est necessaire pour les prochaines etapes de ce projet.
+
             - Eléments dans le namespace par defaut (**default**)
 
                 A ce niveau, nous allons configurer le namespace par défaut et autoriser les comptes de service (sa) de ce namespace à accéder à la stratégie de sécurité Pod privilégiée. Là encore, il s'agit d'une vulnérabilité, basée sur l'hypothèse que nous contrôlons les autres namespace avec des liaisons de rôles spécifiques au namespace.
 
                 Le contenu du fichier est le suivant:
+
                 ![Namespace default role](./images/NS_default_role.png)
 
                 La commande suivante permet d'appliquer le fichier précédent:
