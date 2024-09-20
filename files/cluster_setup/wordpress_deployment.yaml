@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      serviceAccountName: wordpress
+      securityContext:
+        runAsUser: 999
+        fsGroup: 999
+      containers:
+      - name: wordpress
+        image: leonelfeukouo/worbprezz:latest
+        imagePullPolicy: Always

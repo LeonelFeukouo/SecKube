@@ -167,31 +167,10 @@
             - Configurer kubelet en tant qu'unité de service :
 
                 Créer le fichier **/etc/systemd/system/kubelet.service.d/10-kubeadm.conf** avec le contenu suivant :
+                ![Kubeadm](./images/10-kubeadm.png)
 
-                    [Service]
-                    Environment="KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf"
-                    Environment="KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml"
-                    EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env
-                    EnvironmentFile=-/etc/default/kubelet
-                    ExecStart=
-                    ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS
-            
                 Créer un autre fichier **/usr/lib/systemd/system/kubelet.service** avec le contenu suivant à l'intérieur.
-
-                    [Unit]
-                    Description=kubelet: The Kubernetes Node Agent
-                    Documentation=https://kubernetes.io/docs/home/
-                    Wants=network-online.target
-                    After=network-online.target
-
-                    [Service]
-                    ExecStart=/usr/bin/kubelet
-                    Restart=always
-                    StartLimitInterval=0
-                    RestartSec=10
-
-                    [Install]
-                    WantedBy=multi-user.target
+                ![Kubelet](./images/kubelet.png)
 
                 Démarrer et activer kubelet.service :
 
@@ -210,10 +189,18 @@
 
             Le processus d'installation d'un nœud de travail est exactement le même que pour le nœud maître, sauf que apres avoir demarré et activé kubelet.service, nous devons exécuter la commande fournie par **kubeadm init** du master.
 
+            Une fois le cluster pret, on peut le constater avec les commandes suivantes:
+
+                kubectl get nodes
+            ![Get nodes](./images/Get_nodes.png)
+
+                kubectl get all (ou encore kubectl get all -n default)
+            ![Get all](./images/Get_all.png)
+
         - #### 3.1.2 Configuration des différents composants (pods, services, réseaux, etc.)
             Pour cela, nous avons configuré une architecture Kubernetes de base comprenant plusieurs pods, services, et autres, tous representés dans les image suivante : 
             
-            ![Image 5](./images/)
+            ![Architecture des composants](./images/Architecture_des_composants.png)
             
             **NB:** Les configurations initiales suivantes des différents composant n'incluent aucune mésure de sécurité spécifique, afin de servir de référence pour les améliorations ultérieures.
 
@@ -221,174 +208,97 @@
 
                 Dans ces namespaces, comme par example le namespace **kube-system**, nous n'avons rien a configurer, car tout se fait automatiquement lors de l'installation du cluster.
 
+                    kubectl get all -n kube-system
+                ![Get all Kube-system](./images/Get_all_kubesystem.png)
+
             - Eléments dans le namespace de déploiement (**deploy**)
 
                 Tout d'abord, nous configurons le namespace **deploy**. Cela créera le namespace et liera tous les comptes de service de cet espace de noms à la politique de sécurité restreinte du pod.
-
-                    kubectl apply -f secure_ns_role.yaml
                 
                 Le contenu du fichier est le suivant:
+                ![Namespace Deploy](./images/NS_deploy.png)
 
-                    apiVersion: v1
-                    kind: Namespace
-                    metadata:
-                      name: deploy
-                      labels:
-                        pod-security.kubernetes.io/enforce: privileged
-                        pod-security.kubernetes.io/enforce-version: v1.23
+                La commande suivante permet de créer le namespace deploy :
+
+                    kubectl apply -f ns_deploy.yaml
                 
-                NB: Apres avoir deployee tous les elements de ce namespace, nous changerons le label **pod-security.kubernetes.io/enforce** pour lui donner la valeur **restricted**, afin d'appliquer une politique de securite aux pods qui y sont deployee
+                ![Apply NS Deploy](./images/Apply_ns_deploy.png)
+                
+                NB: Apres avoir deployé tous les élements de ce namespace, nous changerons le label **pod-security.kubernetes.io/enforce** pour lui donner la valeur **restricted**, afin d'appliquer une politique de securite aux pods qui y sont deployés.
 
-                Ensuite, nous créons le compte de service (Service Account) dans le namespace deploy. Cela introduira également une vulnérabilité dans la mesure où nous autoriserons ce compte de service à effectuer une grande variété d'actions au sein de l'espace de noms spécifique. Il s'agit d'une hypothèse assez courante mais, comme nous le montrerons, elle peut permettre à un attaquant d'élargir le rayon d'action d'un exploit.
+                Ensuite, nous créons le compte de service (Service Account) **wordpress** dans le namespace de deploiement. Cela introduira également une vulnérabilité dans la mesure où nous autoriserons ce compte de service à effectuer une grande variété d'actions au sein de l'espace de noms spécifique. Il s'agit d'une hypothèse assez courante mais, comme nous le montrerons, elle peut permettre à un attaquant d'élargir le rayon d'action d'un exploit.
 
-                    kubectl apply -f webadmin_user.yaml -n deploy
+                Le contenu du fichier est le suivant :
+                ![SA wordpress](./images/SA_wordpress.png)
 
-                .
+                La commande suivante permet de créer le compte de service **wordpress**, ainsi que le role **allow_pod_read** permettant d'effectuer une variété d'actions:
 
-                    # Create a service account for the webadmin service 
-                    apiVersion: v1
-                    kind: ServiceAccount
-                    metadata:
-                      name: webadmin
-                    ---
-                    # VULNERABILITY 
-                    # Applies the allow_pod_read policy which allows the service
-                    # account to do whatever it wants in the affected namespace
-                    apiVersion: rbac.authorization.k8s.io/v1
-                    kind: Role
-                    metadata:
-                      name: allow_pod_read
-                    rules:
-                    - apiGroups:
-                      - '*'
-                      resources:
-                      - '*'
-                      verbs: ["create", "get", "watch", "list", "patch", "delete", "deletecollection", "update"]
-                    ---
-                    apiVersion: rbac.authorization.k8s.io/v1
-                    kind: RoleBinding
-                    metadata:
-                      name: allow_pod_read_bind
-                    roleRef:
-                      apiGroup: rbac.authorization.k8s.io
-                      kind: Role
-                      name: allow_pod_read
-                    subjects:
-                    - kind: ServiceAccount
-                      name: webadmin
+                    kubectl apply -f sa_wordpress.yaml -n deploy
+                
+                ![Apply SA wordpress](./images/Apply_sa_wordpress.png)
+                
+                NB: Le rolebinding **allow_pod_read_bind** permet de relier le compte de service précédent au role précédent.
 
-                Ensuite, nous introduirons une deuxième vulnérabilité, permettant à cet utilisateur d'interroger les points d'extrémité du serveur API. Là encore, il ne s'agit pas nécessairement d'un problème évident, mais cela permettra à un attaquant d'obtenir des informations supplémentaires sur le cluster.
+                Ensuite, nous introduisons une deuxième vulnérabilité, permettant à cet utilisateur (SA) d'interroger les points d'extrémité du serveur API. Là encore, il ne s'agit pas nécessairement d'un problème évident, mais cela permettra à un attaquant d'obtenir des informations supplémentaires sur le cluster.
 
-                    kubectl apply -f webadmin_allow_role_to_see_endpoints.yaml
+                Le contenu du fichier est le suivant:
+                ![Allow Endpoints](./images/Allow_endpoints.png)
 
-                .
+                La commande suivante permet, comme defini dans le fichier precedent, de créer un nouveau role **allow_endpoint_access** et le lier au compte de service **wordpress**.
 
-                    # VULNERABILITY 
-                    # Expose the "endpoints" for the default namespace to all users.
-                    apiVersion: rbac.authorization.k8s.io/v1
-                    kind: Role
-                    metadata:
-                      name: allow_endpoint_access
-                      namespace: default
-                    rules:
-                    - apiGroups:
-                      - ""
-                      resources:
-                      - endpoints
-                      verbs:
-                      - '*'
-                    ---
-                    apiVersion: rbac.authorization.k8s.io/v1
-                    kind: RoleBinding
-                    metadata:
-                      name: allow_endpoint_access_bind
-                      namespace: default
-                    roleRef:
-                      apiGroup: rbac.authorization.k8s.io
-                      kind: Role
-                      name: allow_endpoint_access
-                    subjects:
-                    - kind: ServiceAccount
-                      name: webadmin
-                      namespace: secure
+                    kubectl apply -f allow_to_see_endpoints.yaml
+
+                ![Apply allow endpoints](./images/Apply_allow_endpoints.png)
                 
                 Nous allons maintenant déployer l'application vulnérable dans le namespace deploy sécurisé.
 
-                    kubectl apply -f webadmin_deployment.yaml -n secure
-                
-                .
+                Le contenu du fichier est le suivant:
+                ![Wordpress Deployment](./images/Wordpress_deployment.png)
 
-                    # Create a deployment for webadmin to use the service account
-                    apiVersion: apps/v1
-                    kind: Deployment
-                    metadata:
-                      name: webadmin
-                    spec:
-                      replicas: 1
-                      selector:
-                        matchLabels:
-                          app: webadmin
-                      template:
-                        metadata:
-                          labels:
-                            app: webadmin
-                        spec:
-                          serviceAccountName: webadmin
-                          securityContext:
-                            runAsUser: 999 # Must be non-0 if you use the PSP
-                            fsGroup: 999 # As of 1.15 (I think) you need this set to access the servicetoken for the pod
-                          containers:
-                          - name: webadmin
-                            image: ericsmalling/webadmin:latest
-                            imagePullPolicy: Always
+                La commande suivante permet d'appliquer le fichier precedent et créer le deploiement dans le namespace sécurisé.
+
+                    kubectl apply -f wordpress_deployment.yaml -n deploy
+                ![Apply wordpress deploy](./images/Apply_wordpress_deploy.png)
+                
                     
-                Nous pouvons voir le pod fonctionner dans l'espace de noms sécurisé :
+                Nous pouvons voir le pod fonctionner dans le namespace sécurisé :
                         
-                    $kubectl get pods -n secure
-                    NAME                        READY   STATUS    RESTARTS   AGE
-                    webadmin-57f55c596d-z5b9b   1/1     Running   0          3s
+                    kubectl get all -n deploy
+                ![Get wordpress deploy](./images/Get_wordpress_deploy.png)
                 
-                Maintenant que l'application vulnérable fonctionne, nous l'exposons en dehors du cluster. Pour cela, nous avons besoin d'un Service de type NodePort :
+                Maintenant que l'application vulnérable fonctionne, nous l'exposons en dehors du cluster. Pour cela, nous avons besoin d'un Service de type NodePort, et de la commande suivante :
 
-                    kubectl expose deployment webadmin -n deploy --type=NodePort --port=5000
+                    kubectl expose deployment wordpress -n deploy --type=NodePort --port=5000
+                ![Expose wordpress deploy](./images/Expose_wordpress_deploy.png)
 
-                À ce stade, nous pouvons afficher l'application vulnérable dans notre navigateur.
+                À ce stade, nous pouvons afficher l'application vulnérable dans le navigateur d'une machine externe au cluster, en renseignant le port **31411**.
+
+                ![Accueil wordpress](./images/Accueil_wordpress.png)
 
             - Eléments dans le namespace par defaut (**default**)
 
-                A ce niveau, nous allons configurer le namespace par défaut et autoriser les comptes de service (sa) de ce namespace à accéder à la stratégie de sécurité Pod privilégiée. Là encore, il s'agit d'une vulnérabilité, basée sur l'hypothèse que nous contrôlons tous les autres namespace avec des liaisons de rôles spécifiques au namespace.
+                A ce niveau, nous allons configurer le namespace par défaut et autoriser les comptes de service (sa) de ce namespace à accéder à la stratégie de sécurité Pod privilégiée. Là encore, il s'agit d'une vulnérabilité, basée sur l'hypothèse que nous contrôlons les autres namespace avec des liaisons de rôles spécifiques au namespace.
 
-                    kubectl apply -f default_ns_role.yaml
+                Le contenu du fichier est le suivant:
+                ![Namespace default role](./images/NS_default_role.png)
 
-                .
+                La commande suivante permet d'appliquer le fichier précédent:
 
-                    apiVersion: rbac.authorization.k8s.io/v1
-                    kind: RoleBinding
-                    metadata:
-                      name: psp:any:defaultpriv
-                      namespace: default
-                    roleRef:
-                      apiGroup: rbac.authorization.k8s.io
-                      kind: ClusterRole
-                      name: psp:privileged
-                    subjects:
-                    - kind: Group
-                      name: system:serviceaccounts
-                      apiGroup: rbac.authorization.k8s.io
-                
+                    kubectl apply -f ns_default_role.yaml
+                ![Apply ns default role](./images/Apply_ns_default_role.png)
+                                
                 Ensuite, nous ajoutons le même compte de service et les mêmes rôles que dans notre espace de noms sécurisé :
 
-                    kubectl apply -f webadmin_user.yaml
+                    kubectl apply -f sa_wordpress.yaml
 
                 Nous ajoutons maintenant une instance de l'application vulnérable à l'espace de noms par défaut :
                     
-                    kubectl apply -f webadmin_deployment.yaml
+                    kubectl apply -f wordpress_deployment.yaml
 
                 Cela nous donne une configuration miroir dans le namespace par défaut que nous avons dans le namespace sécurisé deploy, mais par défaut nous n'appliquons pas la politique de sécurité restreinte du pod.
 
-                    $kubectl get pods
-                    NAME                        READY   STATUS    RESTARTS   AGE
-                    webadmin-57f55c596d-fhqqw   1/1     Running   0          3s
+                    kubectl get all
+                ![Get wordpress default](./images/Get_wordpress_default.png)
 
     - ### 3.2 Test de pénétration de l'architecture non sécurisée
         - #### 3.2.1 Simulation d'attaques courantes
