@@ -4,7 +4,7 @@ import subprocess
 app = Flask(__name__)
 
 seckubehtml = '''
-<head><title>SNYKY ADMIN CONSOLE</title></head>
+<head><title>SECKUBE CONSOLE</title></head>
 <body>
 <h1>Hello, SECKUBE. What command should I run?</h1>
 <p>{cmd}</p>

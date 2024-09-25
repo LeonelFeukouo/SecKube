@@ -181,7 +181,7 @@
             
             - Initialiser le cluster:
 
-                    sudo kubeadm init --kubernetes-version=v1.23.7 --pod-network-cidr=10.244.0.0/16
+                    sudo kubeadm init --kubernetes-version=v1.23.7 --pod-network-cidr=10.244.235.0/16
 
             - Installer un gestionnaire réseaux. Dans notre cas, nous utiliserons CALICO :
 
@@ -319,10 +319,27 @@
 
     - ### 3.2 Test de pénétration de l'architecture non sécurisée
         - #### 3.2.1 Simulation d'attaques courantes
-            Pour évaluer la sécurité de l'architecture non sécurisée, nous avons simulé plusieurs types d'attaques courantes, telles que :
-            - Injection de commandes.
-            - Escalade de privilèges.
-            - Attaques DDoS.
+            Pour évaluer la sécurité de l'architecture non sécurisée, nous avons simulé une unique chaine complete d'attques, repartie en sept etapes, comprennant plusieurs types d'attaques, exploitant des vulnerabilites courantes.
+
+            **a- Examen de la vulnérabilité**
+
+            Lorsqu'on ouvre l'application vulnérable dans notre navigateur à l'adresse http://192.168.115.10:31411. On arrive sur la page d'accueil de l'application, mais en faisant une recherche poussee sur le site web, on constate qu'on a une seconde page web a l'adresse http://192.168.115.10:31411/seckube, qui exploite la vulnérabilité RCE (Remote Code Execution) en passant un paramètre URL cmd. 
+            
+            ![]()
+            
+            Par exemple, la commande suivante exécute une commande de nom d'hôte et affiche la sortie de la console sur la page retournée : http://192.168.115.10:31411/seckube?cmd=hostname
+
+            **b- Accès au serveur api**
+            
+            **c- Cluster fact finding**
+
+            **d- Établir une tête de pont dans le cluster**
+
+            **e- Explorer au-delà de notre espace de noms**
+
+            **f- Échapper à notre espace de noms**
+
+            **g- Posséder le cluster**
 
         - #### 3.2.2 Identification des vulnérabilités et des points faibles
             Les tests de pénétration ont révélé plusieurs vulnérabilités dans l'architecture initiale, notamment :
