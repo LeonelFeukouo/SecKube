@@ -23,5 +23,5 @@ roleRef:
   name: allow_endpoint_access
 subjects:
 - kind: ServiceAccount
-  name: seckube
+  name: wordpress
   namespace: deploy

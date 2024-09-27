@@ -26,4 +26,4 @@ roleRef:
   name: allow_pod_read
 subjects:
 - kind: ServiceAccount
-  name: seckube
+  name: wordpress
