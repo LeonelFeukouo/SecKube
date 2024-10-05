@@ -405,7 +405,76 @@
                       }
                     ]
             
-            **c- Cluster fact finding**
+            **c- Recherche de faits sur le cluster**
+
+            Nous voulons pouvoir utiliser kubectl pour accéder directement au cluster au lieu d'avoir à utiliser l'URL RCE encombrante. Pour ce faire, nous allons copier le contenu du jeton de http://192.168.115.10:31411/seckube?cmd=cat%20/var/run/secrets/kubernetes.io/serviceaccount/token dans le fichier de configuration kubectl. 
+
+            Pour creer le fichier de configuration, nous nous servons du script suivant :
+
+            ![Script KUBECONFIG](./images/setup_kubeconfig.PNG)
+
+            Ce script permet de definir un nouvel utilisateur kubernetes nommee **seckube** avec son **TOKEN**, un nouveau cluster nommee **exploited**, creer un nouveau context nommee **exploited**, et de definir le context **exploited** comme celui par defaut.
+
+            Lors de l'execution du script, il nous demande les informations suivantes, pour pouvoir se connecter au cluster distant :
+
+            - Entrer le jeton : coller le contenu complet du jeton
+            - Enter l'hote de l'API kubernetes : ici 192.168.115.10:6443.
+
+            NB: Nous avons telecharger le binaire **kubectl** en suivant la meme procedure que lors du processus d'installation de kubernetes.
+
+            ![Creation Kubeconfig](./images/create_kubeconfig.PNG)
+
+            Apres l'execution du script, nous obtenons le fichier suivant :
+
+            ![KUBECONFIG](./images/kubeconfig.PNG)
+
+            Vérifions que le contexte est défini en exécutant la commande suivante : 
+            
+                kubectl config current-context 
+            
+            Il retourne **exploited**.
+
+            Si cela ne fonctionne pas, il se peut que nous n'ayons pas defini la variable d'environnement **KUBECONFIG**. Pour résoudre ce problème, exécutons simplement la commande suivante : 
+            
+                export KUBECONFIG=kubeconfig 
+            
+            ou alors, executons cette commande : 
+            
+                kubectl config --kubeconfig=kubeconfig current-context
+
+            ![Cluster exploited](./images/cluster_exploited.PNG)
+
+            Avec notre contexte kubectl maintenant défini, essayons d'accéder au cluster en exécutant la commande suivante :
+            
+                kubectl get pods
+            
+            ![Get pods default](./images/Hack_get_pods_default.PNG)
+
+            L'erreur **Forbidden** que nous voyons ci-dessus nous indique simplement que le ServiceAccount que nous utilisons via le jeton n'a pas les privilèges suffisants pour lister les Pods dans le Namespace par défaut. Cette erreur, cependant, révèle quelque chose d'utile dans la valeur de l'utilisateur : **system:serviceaccount:deploy:webadmin**. Cette chaîne contient le nom de l'espace de nom dans lequel se trouve le ServiceAccount : **deploy**. Ainsi, le Pod à partir duquel nous avons copié le jeton s'exécute dans un espace de nom nommé "deploy".
+
+            Compte tenu de ces informations, essayons de lister les Pods dans l'espace de nom deploy en ajoutant **-n deploy** à la commande :
+
+            ![Get pods deploy](./images/Hack_get_pods_deploy.PNG)
+
+            Succès ! C'est le pod que nous avons attaqué avec notre exploit RCE.
+
+            Voyons quels autres privilèges ce jeton nous donne acces via la commande suivante :
+            
+                kubectl auth can-i --list
+
+            ![](./images/Hack_auth_cani_default.PNG)
+
+            Cela montre que, dans l'espace de noms par défaut, nous avons accès à tous les verbes (*) de la ressource endpoints et à un accès limité à d'autres ressources de type boilerplate qui ne sont pas intéressantes pour le moment (supprimées de l'exemple pour des raisons de concision.) L'absence de ressource pods ici est la raison pour laquelle nous avons obtenu cette erreur "Forbidden" lors de la première tentative de get pods dans l'espace de noms par défaut.
+
+            Essayons la même commande dans l'espace de nom deploy: 
+            
+                kubectl auth can-i --list -n deploy
+            
+            ![](./images/Hack_auth_cani_deploy.PNG)
+
+            Nous voyons ici le caractère générique **toutes les ressources (*.*)** avec l'ensemble de tous les verbes, ce qui signifie que nous avons un accès complet à toutes les ressources de l'espace de nom deploy !
+
+            Nous savons maintenant que nous pouvons faire un certain nombre de choses dans l'espace de noms deploy, et pas grand-chose par défaut.
 
             **d- Établir une tête de pont dans le cluster**
 
