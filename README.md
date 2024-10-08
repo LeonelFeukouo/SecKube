@@ -478,6 +478,66 @@
 
             **d- Établir une tête de pont dans le cluster**
 
+            Maintenant que nous avons des permissions dans le namespace deploy, nous allons escalader nos privilèges pour pénétrer dans d'autres zones du cluster.
+
+            Tout d'abord, exécutons le Pod wordpress et voyons ce qui est disponible pour nous. 
+
+            ![](./images/exec_wordpress1.PNG)
+
+            Maintenant que nous avons un shell dans le Pod, voyons si nous sommes (ou pouvons devenir) root. Vérifions notre utilisateur avec whoami :
+
+            ![](./images/user_pod.PNG)
+
+            Nous ne somme pas root, mais voyons si on peut devenir root avec la commande suivante: 
+            
+                sudo su-
+
+            ![](./images/sudo_not_found.PNG)
+
+            Pas de sudo. Cela nous indique que l'image est mieux construite que la plupart des images par défaut, car les auteurs ont pris le temps de passer à un utilisateur non root et n'utilisent pas sudo.
+
+            Voyons si nous pouvons modifier le système de fichiers : 
+            
+                touch test
+            
+            ![](./images/cmd_touch.PNG)
+
+            Nous pouvons écrire dans le système de fichiers racine, ce qui signifie que nous pouvons télécharger un logiciel ou modifier une configuration. Nous savons déjà que nous avons curl, donc c'est tout à fait possible. Il s'agit d'une vulnérabilité, causée par le fait de ne pas définir **readonlyRootFilesystem=true** dans le contexte de securite du pod et de ne pas l'appliquer dans le **PSP (Pod Security Policy)**.
+
+            Bien que cela soit intéressant, il sera difficile d'élever les privilèges à la racine dans le Pod, alors quittons la session exécutive, et passons à autre chose pour l'instant.
+
+            Essayons de lancer un pod avec un utilisateur root en utilisant le fichier suivant, qui consiste en un conteneur exécutant l'image alpine qui dort simplement mais s'exécute en tant que root par défaut.
+
+            ![](./images/root_pod.PNG)
+
+                kubectl apply -f root_pod.yaml
+
+            ![](./images/root_pod_not_create.PNG)
+
+            L'erreur montre que plusieurs violations de **PodSecurity (PSP)** ont été détectées, ce qui indique que la PSA (Pod Security Admission) est activée. Sur la base des règles spécifiques citées, il s'agit probablement d'une politique restreinte (restricted) du contexte de securite du Pod. Cela empêche également le démarrage d'un conteneur privilégié.
+
+            Compte tenu des restrictions imposées par le PSA, essayons de déployer notre propre pod à l'aide d'une image de conteneur et d'outils qui nous aideront à explorer le cluster. Le fichier suivant est un Pod qui exécute notre conteneur avec les paramètres de contexte de securite appropriés pour satisfaire la PSA.
+
+            ![](./images/nonroot_nonpriv_restricted_pod.PNG)
+
+                kubectl apply -f nonroot_nonpriv_restricted.yaml -n deploy
+            
+            ![](./images/nonroot_nonpriv_restricted_pod_create.PNG)
+
+            Nous allons maintenant exécuter notre nouveau Pod et voir ce que nous pouvons faire : 
+            
+                kubectl exec -n deploy -it snyky -- bash
+            
+            ![](./images/exec_snyky.PNG)
+
+            Cette image contient sudo, mais malgré ce que dit l'invite de connexion, si nous essayons d'exécuter **sudo ls**, nous obtenons l'erreur suivante :
+
+            ![](./images/error_sudo.PNG)
+
+            En effet, les paramètres securityContext du manifeste Pod sont définis sur **allowPrivilegeEscalation : false** pour satisfaire la PSA.
+
+            À ce stade, nous n'avons pas d'accès root au Pod, mais nous disposons d'un shell dans un conteneur qui nous donne notre point de départ.
+
             **e- Explorer au-delà de notre espace de noms**
 
             **f- Échapper à notre espace de noms**
