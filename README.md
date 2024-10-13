@@ -193,7 +193,7 @@
             
             - Initialiser le cluster:
 
-                    sudo kubeadm init --kubernetes-version=v1.23.7 --pod-network-cidr=10.244.235.0/8
+                    sudo kubeadm init --kubernetes-version=v1.23.7 --pod-network-cidr=10.244.235.0/24
             
             - Donner l'autorisation a l'utilisateur courant d'executer les commandes Kubernetes:
 
@@ -540,7 +540,104 @@
 
             **e- Explorer au-delà de notre espace de noms**
 
+            Maintenant que nous possédons un conteneur dans le cluster, nous allons l'utiliser pour explorer davantage le cluster et essayer de trouver d'autres cibles. Puisque nous savons que le cluster héberge une application vulnérable en production, il y a de fortes chances que d'autres instances de cette application tournent ailleurs et puisqu'elle a été déployée avec un service sur le port 5000, il y a de fortes chances que la même configuration de déploiement soit utilisée.
+            
+            Pour ce faire, nous utiliserons l'outil nmap pour scanner le réseau à la recherche d'autres copies de cette application vulnérable en recherchant tout ce qui accepte des connexions sur le port 5000.
+
+            Tout d'abord, tout en étant toujours exécuté dans le Pod snyky depuis les étapes précédentes, découvrons l'adresse IP de notre Pod. Il y a plusieurs façons de le faire : **hostname -i** ou **ifconfig** fonctionnent tous les deux ici
+
+            ![](./images/ip_address_snyky.PNG)
+
+            Nous allons maintenant utiliser cette IP dans les arguments de nmap pour spécifier le réseau Pod : 
+            
+                nmap -sT -p 5000 -PN -n --open 10.244.235.66/24
+
+            ![](./images/scan_nmap.PNG)
+
+            Ce que nous voyons, c'est qu'il y a deux adresses IP qui écoutent sur le port 5000 :
+            
+            - 10.244.235.65: Il s'agit d'autre chose... peut-être une autre copie de l'application vulnérable ?
+            - 10.244.235.129: Il s'agit du pod original que nous avons attaqué dans le namespace deploy.
+            
+            NB : Comme nous ne sommes pas l'utilisateur root, nous avons dû utiliser un scan de connexion TCP (option -sT) ; c'est une opération assez "bruyante" qui pourrait déclencher une détection d'intrusion et des tentatives de connexion enregistrées sur d'autres hôtes. Si nous etions root, l'analyse TCP SYN plus furtive (option -sS) serait préférable, mais elle nécessite des privilèges et/ou des capacités élevés.
+
+                nmap -sS -p 5000 -PN -n --open 10.244.235.66/24
+            
+            ![](./images/scan_nmap1.PNG)
+
             **f- Échapper à notre espace de noms**
+
+            Maintenant que nous savons qu'il existe un autre listener sur le port 5000 dans un autre namespace, nous allons utiliser un simple tunneling TCP pour l'attaquer.
+
+            Dans le shell exec toujours ouvert depuis l'étape précédente, nous allons utiliser l'outil **socat** pour créer un tunnel vers ce nouvel auditeur : 
+            
+                socat tcp-listen:5001,reuseaddr,fork tcp:10.244.235.65:5000
+
+            Cette commande laissera le Shell du conteneur SNYKY en suspend.
+
+            Dans un nouveau shell, définissons notre variable de configuration Kubernetes et créons un **port-forward** dans le pod snyky :
+
+            ![](./images/port_forward.PNG)
+
+            Avec ces tunnels en place, tout trafic TCP se connectant à notre machine locale sur le port 5001 sera transféré au pod snyky sur le port 5001. Ensuite, le processus socat transmettra ce trafic du pod snyky au service mystère sur le port 5000.
+
+            Ouvrons http://localhost:5001 dans notre navigateur...
+
+            ![](./images/Accueil_wordpress1.png)
+
+            On peut constater qaue c'est la même application s'y exécute. Ce qui nous interresse, c'est l'url cachee dans l'application.
+
+            ![](./images/Accueil_seckube1.PNG)
+
+            Voyons si cette copie de l'application présente la vulnérabilité RCE en recherchant son jeton : http://localhost:5001/seckube?cmd=cat%20/var/run/secrets/kubernetes.io/serviceaccount/token
+
+            ![](./images/cmd_cat_token1.PNG)
+
+            Oui, c'est le cas et nous avons maintenant un autre jeton que nous pouvons expérimenter. Nous pouvons maintenant fermer le port-forward, tuer le processus socat et quitter la session exec du pod snyky, car nous n'en n'aurons plus besoin.
+
+            Ouvrons le fichier kubeconfig dans un éditeur, commentons le token existant et insérons une nouvelle ligne avec le nouveau token dans notre navigateur.
+
+            ![](./images/kubeconfig1.PNG)
+
+            Avec ce nouveau jeton en place, essayons à nouveau de lister les pods dans le namespace par defaut : 
+            
+                kubectl get pods
+
+            ![](./images/get_pods_default.PNG)
+
+            Il semble qu'il y ait une copie de l'application dans le namespace par défaut et, par conséquent, nous avons maintenant un jeton ServiceAccount par défaut à notre disposition.
+
+            Nous devrions voir quelles permissions ce nouveau jeton nous donne avec : 
+            
+                kubectl auth can-i --list
+            
+            ![](./images/Hack_auth_cani_default1.PNG)
+
+            Nous avons un accès complet à toutes les ressources (*.*) du namespace par défaut ! Cela arrive plus souvent qu'on ne le pense car la plupart des développeurs n'écrivent des restrictions RBAC que pour les ressources des Namespaces dans lesquels leurs applications vivent, laissant la valeur par défaut à quelqu'un d'autre. Malheureusement, pour ce cluster, le RBAC par défaut pour le ServiceAccount par défaut est grand ouvert !
+
+            Nous pouvons maintenant essayer de déployer un pod dans le namespace par défaut ; essayons à nouveau ce pod privilégié et voyons s'il fonctionne. Son contenu est le suivant :
+
+            ![](./images/nonroot_priv_pod.PNG) 
+            
+                kubectl apply -f nonroot_priv.yaml
+            
+            ![](./images/nonroot_priv_pod_create.PNG)
+
+            Cela a fonctionné, ce qui indique que les restrictions de PSA dans le namespace par défaut sont assouplies ou inexistantes.
+
+            Executons ce pod et voyons ce que nous pouvons faire : 
+            
+                kubectl exec -it nonroot-priv -- bash
+            
+            ![](./images/exec_nonroot_priv.PNG)
+
+            Tout se passe bien jusqu'à présent, mais si nous regardons le manifeste de ce pod, nous constatons qu'on monte un volume hôte sur le chemin **/chroot** (section en encadree en rouge dans le manifeste).
+
+            Executons la commande **chroot /chroot** dans le conteneur et voyons ce que nous obtenons.
+
+            ![](./images/cmd_chroot.PNG)
+
+            Il s'agit des processus en cours d'exécution sur l'hôte qui execute le pod. Nous avons effectivement échappé à ce conteneur en montant le volume hôte / dans le conteneur et en le **chroot**ant.
 
             **g- Posséder le cluster**
 
