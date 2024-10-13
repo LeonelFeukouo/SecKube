@@ -761,11 +761,40 @@
 
             Presentement, nous sommes les proprietaires du cluster. Nous pouvons effectuer toutes les operations que nous souhaitons dans le cluster.
 
-        - #### 3.2.2 Identification des vulnérabilités et des points faibles
-            Les tests de pénétration ont révélé plusieurs vulnérabilités dans l'architecture initiale, notamment :
-            - L'accès non autorisé à certains services.
-            - La possibilité d'exécuter des commandes arbitraires sur les pods.
-            - L'absence de restrictions de réseau permettant une communication non sécurisée entre les pods.
+        - #### 3.2.2 Identification des vulnérabilités et des points de faiblesses.
+            Les tests de pénétration effectués précédemment ont révélé plusieurs vulnérabilités critiques dans l'architecture initiale de Kubernetes. Ces vulnérabilités exposent l'infrastructure à des attaques potentielles, compromettant la sécurité des applications déployées et des données sensibles. Voici une analyse approfondie des vulnérabilités identifiées :
+
+            **a- Exécution de commandes arbitraires (Remote Code Execution) dans un pod à partir du navigateur**
+            
+            L'exécution de commandes arbitraires à distance (Remote Code Execution - RCE) est l'une des failles les plus critiques. Dans ce cas, un attaquant peut, via une simple interface navigateur, exécuter des commandes dans un pod sans authentification ou restriction. Cela donne à l'attaquant un accès direct aux ressources du cluster et aux informations sensibles. Cette vulnérabilité est souvent due au fait de l'utilisation d'une image de base non verifiee. L'attaquant pourrait exécuter des scripts malveillants, installer des backdoors, ou manipuler les applications déployées. Cela pourrait entraîner la perte ou le vol de données, voire le contrôle complet du cluster.
+
+            ![](./images/cmd_env.PNG)
+
+            **b- L'exposition du service account par defaut du namespace courant dans les pods**
+
+            Par défaut, Kubernetes associe un service account à chaque pod dans un namespace donné. Si ce service account n'est pas correctement restreint, il peut être utilisé pour accéder à d'autres ressources du cluster avec des privilèges élevés. L'utilisation du service account par défaut est souvent négligée, laissant les pods avec des privilèges non nécessaires ou trop élevés. Cette mauvaise gestion des identités et des permissions expose le cluster à des attaques d'escalade de privilèges. Un attaquant pourrait utiliser le service account pour obtenir des tokens d'accès aux API Kubernetes, permettant l'accès à des secrets, la création ou suppression de ressources, voire le contrôle d'autres parties du cluster.
+
+            ![](./images/cmd_cat_token.PNG)
+
+            ![](./images/cmd_curl_endpoints.PNG)
+
+            **c- L'acces en ecriture aux pods du cluster par un utilisateur connectee a partir du shell**
+
+            Lors des tests, il a été découvert qu'un utilisateur ayant accès au shell pouvait modifier ou écrire dans des pods, même s'il n'était pas censé avoir ces permissions. Cela représente un risque élevé d'escalade de privilèges ou de modification non autorisée des applications déployées. Cette vulnérabilité est généralement due à une mauvaise configuration des permissions RBAC ou à des privilèges trop étendus accordés aux utilisateurs du cluster. Un utilisateur malveillant pourrait modifier des configurations critiques, déployer des conteneurs malveillants ou altérer le fonctionnement normal des services du cluster, entraînant des interruptions ou compromettant la sécurité des données.
+
+            ![](./images/cmd_touch.PNG)
+
+            **d- L'absence de restrictions de réseau permettant une communication non sécurisée entre les pods**
+
+            Dans l'architecture actuelle, il n'existe pas de restrictions de communication réseau entre les pods. Cela signifie que tous les pods peuvent librement communiquer entre eux, ce qui augmente le risque de propagation d'attaques internes. Par défaut, Kubernetes permet à tous les pods d'un cluster de communiquer entre eux sans restrictions. Sans l'implémentation de **Network Policies**, il n'y a pas de contrôle granulaire sur les communications entre les pods. Un attaquant ayant compromis un seul pod pourrait facilement se déplacer dans le réseau interne et attaquer d'autres pods, escaladant potentiellement ses privilèges ou compromettant davantage de ressources.
+
+            ![](./images/scan_nmap.PNG)
+
+            **e- L'utilisation de versions obsolètes de Kubernetes**
+
+            Le cluster utilise une version de Kubernetes (v1.23.7) qui présente des vulnérabilités connues, permettant à un attaquant d'exploiter des failles pour accéder à certaines ressources ou contourner des restrictions de sécurité mises à jour dans les versions récentes. Cette utilisation de versions obsoletes est causee par l'absence de mises à jour régulières du cluster Kubernetes et de ses composants critiques. Les versions obsolètes sont particulièrement vulnérables aux attaques connues et aux exploits publiés. L'utilisation de versions obsolètes permettrait à des attaquants d'exploiter des vulnérabilités corrigées dans les versions plus récentes, compromettant ainsi la sécurité globale du cluster.
+
+            ![](./images/Get_nodes.png)
 
     - ### Conclusion
         Ce chapitre a décrit le développement et le déploiement de l'architecture non sécurisée, ainsi que les résultats des tests de pénétration initiaux. Ces résultats serviront de référence pour la mise en œuvre des mesures de sécurité décrites dans le prochain chapitre.
