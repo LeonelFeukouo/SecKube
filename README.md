@@ -641,6 +641,126 @@
 
             **g- Posséder le cluster**
 
+            Maintenant que nous avons le système de fichiers de l'hôte sur le pod, nous avons accès à beaucoup plus d'informations. Ce qui est particulièrement intéressant pour nos objectifs est le jeton du kubelet qui a des permissions beaucoup plus larges que les jetons ServiceAccount que nous avons utilisés jusqu'à présent.
+
+            Dans le shell de l'étape précédente - toujours en tant que root et avec le système de fichiers de l'hôte monté - nous allons récupérer le contexte du kubelet et l'utiliser pour regarder dans le namespace **kube-system** et lister les nœuds de ce cluster.
+
+            Commandes que nous allons exécuter :
+
+            - **export KUBECONFIG=/etc/kubernetes/kubelet.conf** : Ce fichier contient le jeton du kubelet.
+            - **kubectl get pods -n kube-system** : Liste les pods du namespace **kube-system** dans le **control-plane**
+            - **kubectl get nodes** : Liste les noms et les rôles des nœuds qui composent la grappe.
+
+            ![](./images/cmd_export_get_pods_and_nodes.PNG)
+
+            Voyons si nous pouvons lancer un pod directement avec ce jeton. Nous essayons un simple shell busybox :
+
+                kubectl run -it --rm busybox --image=busybox --restart=Never -- sh
+            
+            ![](./images/run_pod_busybox.PNG)
+
+            Cette commande échoue car le token kubelet n'a pas encore toutes les permissions nécessaires pour démarrer via le serveur API. La ligne **mirror pods** est cependant intéressante, car elle nous permettrait de lancer n'importe quel pod directement dans **kube-system** en plaçant un fichier YAML dans **/etc/kubernetes/manifests** sur le nœud. Cela nous donnerait alors de nombreux vecteurs d'attaque contre les autres pods du plan de contrôle dans l'espace de noms kube-system. Nous laisserons cela de côté pour l'instant.
+
+            Etant donné que nous pouvons voir les pods dans l'espace de noms kube-system, notre prochain objectif est de trouver des informations d'identification qui peuvent nous donner un accès de niveau administrateur au plan de contrôle. Essayons de lister les secrets dans l'espace de nom kube-system :
+
+                kubectl get secrets -n kube-system
+            
+            ![](./images/cmd_get_secrets.PNG)
+
+            Cela n'a pas fonctionné, mais il y a un autre vecteur d'attaque pour accéder à ces secrets : **etcd**.
+
+            Puisque nous avons échappé à PSA, et que nous savons maintenant quels nœuds nous avons (un **worker nodes**), nous allons lancer un pod sur le nœud hébergeant etcd, et dans la configuration du pod, nous allons monter le système de fichiers de l'hôte pour nous donner les informations d'identification pour nous connecter à etcd.
+
+            A partir de la liste des pods ci-dessus, nous pouvons voir que le serveur **etcd** semble fonctionner en tant que le pod **etcd-master**. Etcd est la persistance de l'état pour le cluster, nous devons y accéder et exfiltrer un jeton d'administration si possible.
+
+            Tout d'abord, nous devons déterminer sur quel noeud tourne le serveur etcd et où sont stockées ses informations d'identification. Ceci sera disponible dans la description du pod :
+
+                kubectl describe pod etcd-master -n kube-system
+            
+            La réponse contient beaucoup d'informations précieuses, nous allons donc l'examiner par morceaux :
+
+            ![](./images/describe_etcd1.PNG)
+
+            A partir de là, nous voyons qu'il tourne sur le noeud **master**.
+
+            ![](./images/describe_etcd2.PNG)
+
+            Le serveur etcd ecoute sur a l'url suivante: https://192.168.115.10:2379
+
+            ![](./images/describe_etcd3.PNG)
+
+            Les certificats sont sauvegardee a l'adresse : **/etc/kubernetes/pki/etcd**
+
+            Quittons le pod en cours d'execution et appliquons le pod **etcdclient** dont le manifest est le suivant:
+
+            ![](./images/etcdclient_config.PNG)
+
+                kubectl apply -f etcdclient.yaml
+
+            ![](./images/etcdclient_apply.PNG)
+
+            Nous pouvons maintenant lancer **etcdctl** en exécutant ce pod pour tester notre connexion au serveur etcd :
+
+                kubectl exec etcdclient -- /usr/local/bin/etcdctl member list
+            
+            ![](./images/etcdclient_test.PNG)
+
+            C'est une réponse valide, donc nos informations d'identification et nos paramètres fonctionnent, maintenant cherchons quelque chose de plus intéressant.
+
+            Etcd contient de nombreuses informations intéressantes sur le cluster, dont les secrets ne sont pas les moindres. On peut ennumerer ces secrets avec :
+
+                kubectl exec etcdclient -- /usr/local/bin/etcdctl get '' --keys-only --from-key | grep secrets
+            
+            ![](./images/etcdclient_get_secrets.PNG)
+            
+            La ligne contenant le role **clusterrole-aggregation-controller-token-g56mv** est un rôle dont les droits peuvent être utilisés.
+
+            Obtenons maintenant le contenu du secret nommee clusterrole-aggregation-controller-token-g56mv:
+
+                kubectl exec etcdclient -- /usr/local/bin/etcdctl get /registry/secrets/kube-system/clusterrole-aggregation-controller-token-g56mv
+            
+            ![](./images/content_secret_clusterrole.PNG)
+
+            Nous obtenons beaucoup de données de cette requête mais la dernière très longue ligne qui commence par **token�** est ce que nous voulons. Copions tout ce qui suit ce nom de champ (sans saisir le caractère non imprimable à la fin de token�) jusqu'au bout, mais sans inclure la partie **#kubernetes.io/service-account-token** à la fin.
+
+            Voici un exemple de capture d'écran avec la partie en surbrillance que nous souhaitons copier :
+
+            ![](./images/content_token_clusterrole.PNG)
+
+            Editons notre fichier kubeconfig une fois de plus, en commentant le jeton précédent : ajoutons-en un nouveau avec la chaîne que nous avons copiée.
+
+            ![](./images/kubeconfig2.PNG)
+
+            Voyons quelles sont les autorisations de ce jeton :
+
+                kubectl auth can-i --list
+            
+            ![](./images/Hack_auth_cani_default2.PNG)
+
+            Ce n'est pas tout à fait un accès administrateur complet, mais le fait que nous puissions escalader les ClusterRoles signifie que nous n'en sommes qu'à un pas.
+
+            Modifions maintenant les droits du service account **clusterrole-aggregation-controller** afin de donner un acces administrateur complet : 
+            
+                kubectl edit clusterrole system:controller:clusterrole-aggregation-controller 
+            
+            ![](./images/CAC.PNG)
+
+            L'image precedente est le contenu du clusterrole avant modifications.
+
+            ![](./images/CAC_ok.PNG)
+
+            Sauvegardons et quittons la session d'édition et nous devrions voir ce qui suit :
+
+            ![](./images/CAC_edited.PNG)
+
+            Vérifions à nouveau les autorisations :
+
+                kubectl auth can-i --list
+            
+            ![](./images/Hack_auth_cani_default3.PNG)
+
+            Presentement, nous sommes les proprietaires du cluster. Nous pouvons effectuer toutes les operations que nous souhaitons dans le cluster.
+
         - #### 3.2.2 Identification des vulnérabilités et des points faibles
             Les tests de pénétration ont révélé plusieurs vulnérabilités dans l'architecture initiale, notamment :
             - L'accès non autorisé à certains services.
