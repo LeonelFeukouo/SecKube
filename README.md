@@ -770,13 +770,11 @@
 
             ![](./images/cmd_env.PNG)
 
-            **b- L'exposition du service account par defaut du namespace courant dans les pods**
+            **b- L'exposition des services accounts dans les pods**
 
             Par défaut, Kubernetes associe un service account à chaque pod dans un namespace donné. Si ce service account n'est pas correctement restreint, il peut être utilisé pour accéder à d'autres ressources du cluster avec des privilèges élevés. L'utilisation du service account par défaut est souvent négligée, laissant les pods avec des privilèges non nécessaires ou trop élevés. Cette mauvaise gestion des identités et des permissions expose le cluster à des attaques d'escalade de privilèges. Un attaquant pourrait utiliser le service account pour obtenir des tokens d'accès aux API Kubernetes, permettant l'accès à des secrets, la création ou suppression de ressources, voire le contrôle d'autres parties du cluster.
 
             ![](./images/cmd_cat_token.PNG)
-
-            ![](./images/cmd_curl_endpoints.PNG)
 
             **c- L'acces en ecriture aux pods du cluster par un utilisateur connectee a partir du shell**
 
@@ -790,12 +788,19 @@
 
             ![](./images/scan_nmap.PNG)
 
-            **e- L'utilisation de versions obsolètes de Kubernetes**
+            **e- L'accès non autorisé à certains services**
+
+            Certains services critiques du cluster sont exposés sans authentification ni autorisation. Cela inclut potentiellement l'accès à des bases de données, des API, ou d'autres services internes. Cette vulnérabilité est souvent due à une mauvaise configuration des accès API ou à l'absence de restrictions RBAC (Role-Based Access Control) pour contrôler qui peut interagir avec les ressources du cluster. Un accès non autorisé à ces services permettrait à un attaquant de lire, modifier ou détruire des données sensibles, compromettant ainsi l'intégrité et la confidentialité des informations.
+
+            ![](./images/cmd_curl_endpoints.PNG)
+
+            **f- L'utilisation de versions obsolètes de Kubernetes**
 
             Le cluster utilise une version de Kubernetes (v1.23.7) qui présente des vulnérabilités connues, permettant à un attaquant d'exploiter des failles pour accéder à certaines ressources ou contourner des restrictions de sécurité mises à jour dans les versions récentes. Cette utilisation de versions obsoletes est causee par l'absence de mises à jour régulières du cluster Kubernetes et de ses composants critiques. Les versions obsolètes sont particulièrement vulnérables aux attaques connues et aux exploits publiés. L'utilisation de versions obsolètes permettrait à des attaquants d'exploiter des vulnérabilités corrigées dans les versions plus récentes, compromettant ainsi la sécurité globale du cluster.
 
             ![](./images/Get_nodes.png)
 
+            
     - ### Conclusion
         Ce chapitre a décrit le développement et le déploiement de l'architecture non sécurisée, ainsi que les résultats des tests de pénétration initiaux. Ces résultats serviront de référence pour la mise en œuvre des mesures de sécurité décrites dans le prochain chapitre.
  
@@ -803,18 +808,55 @@
     - ### Introduction
         Ce chapitre se concentre sur la sécurisation de l'architecture Kubernetes initiale en appliquant des mesures de sécurité recommandées.
 
-    - ### 4.1 Planification des fonctionnalités de sécurisation à implémenter dans les sprints
+    - ### 4.1 Planification des fonctionnalités de sécuritee à implémenter dans les sprints
+        Pour garantir une approche itérative et progressive de la sécurisation du cluster Kubernetes, nous avons planifié les fonctionnalités de sécurité à implémenter en plusieurs sprints, en suivant la méthodologie Scrum. Les priorités ont été définies en fonction des vulnérabilités critiques identifiées lors des tests de pénétration, et chaque fonctionnalité de sécurité sera associée à des critères d'acceptation clairs pour valider son implémentation.
+
         - #### 4.1.1 Identification des priorités de sécurité
-            Les priorités de sécurité ont été définies en fonction des vulnérabilités identifiées lors des tests de pénétration initiaux. Les mesures prioritaires incluent :
-            - L'implémentation de RBAC pour contrôler les accès.
-            - La configuration des politiques de réseau pour restreindre les communications.
-            - La sécurisation des données sensibles.
+            Les priorités de sécurité sont basées sur les failles critiques découvertes lors de l'audit de sécurité initial et des tests de pénétration. Ces priorités sont essentielles pour durcir l'architecture Kubernetes contre les attaques externes et internes. Les mesures de sécurité identifiées incluent :
+            
+            - **Mise à jour de Kubernetes vers la dernière version stable et sécurisée** :
+                La mise à jour doit être prioritaire, car elle constitue la base de toute autre mesure de sécurité. Les versions obsolètes contiennent souvent des vulnérabilités critiques.
+
+            - **Implémentation de RBAC (Role-Based Access Control) pour contrôler les accès** :
+                Un contrôle d'accès granulaire est fondamental pour protéger le cluster contre les accès non autorisés et limiter les actions des utilisateurs en fonction de leurs besoins.
+
+            - **Configuration des politiques de réseau pour restreindre les communications entre les pods** : 
+                Réduire la surface d'attaque en isolant les pods critiques et en autorisant uniquement les communications nécessaires est une mesure essentielle pour empêcher les attaques internes.
+
+            - **Amélioration des politiques de sécurité des pods** : 
+                Bien que moins urgente que les mises à jour et RBAC, empêcher la modification des pods est crucial pour éviter l'altération malveillante des applications et des données, ou une elevation de privilèges.
+            
+            - **Sécurisation des données sensibles, telles que les service accounts et les secrets** :
+                La sécurisation des secrets et des service accounts est critique, car elle protège les informations d'identification sensibles, comme les tokens d'accès API, les mots de passe, ou les certificats. 
+            
+            - **Sécurisation de l'API** :
+                L'API Kubernetes est l'un des principaux vecteurs d'attaque et doit être sécurisée pour éviter toute compromission du cluster.
+
+            - **Scan complet des images de pods avant leur utilisation** :
+                Le scan d'images est indispensable pour éviter l'introduction de logiciels vulnérables dans le cluster via des conteneurs mal sécurisés. Cela protège également contre les failles au niveau de la chaîne d'approvisionnement logicielle (Supply Chain Security).
 
         - #### 4.1.2 Définition des critères d'acceptation
-            Les critères d'acceptation pour chaque fonctionnalité de sécurité incluent :
-            - La capacité de restreindre les accès non autorisés.
-            - La prévention des communications non sécurisées entre les pods.
-            - La protection efficace des données sensibles.
+            Les critères d'acceptation définissent les conditions minimales que chaque fonctionnalité de sécurité doit satisfaire pour être considérée comme correctement implémentée. Chaque critère est aligné sur les priorités de sécurité précédemment identifiées. 
+            - **Le fonctionnement de Kubernetes avec la dernière version stable et sécurisée** : 
+                Le cluster doit être mis à jour vers la dernière version de Kubernetes sans interruption des services en cours. La version utilisée doit être testée et approuvée pour corriger toutes les vulnérabilités connues.
+            
+            - **Capacité de restreindre les accès non autorisés (RBAC)** :
+                Toutes les actions dans le cluster doivent être soumises à des règles RBAC strictes. Aucun utilisateur ou service ne doit avoir plus de privilèges que nécessaire pour accomplir ses tâches. Les logs d'audit doivent confirmer que seuls les utilisateurs autorisés accèdent aux ressources.
+
+            - **Prévention des communications non sécurisées entre les pods (Network Policies)** : 
+                Les Network Policies doivent être en place pour empêcher toute communication non autorisée entre les pods. Les tests de réseau doivent montrer que seuls les pods autorisés peuvent échanger des données entre eux, selon les règles définies.
+
+            - **Incapacité de modifier le système de fichiers d'un pod** : 
+                Les pods doivent être configurés de manière à ce qu'aucun utilisateur ou processus non autorisé ne puisse modifier leur système de fichiers ou leurs ressources internes. Des tests d'intégrité doivent vérifier que les systèmes de fichiers sont protégés contre toute modification malveillante.
+
+            - **Protection efficace des données sensibles** : 
+                Les secrets, tokens de service accounts, et autres données sensibles doivent être stockés de manière sécurisée et accessibles uniquement aux entités autorisées. Des audits de sécurité doivent prouver que les données sensibles ne sont pas exposées ou vulnérables aux attaques.
+
+            - **Incapacité d'acceder a l'API** : 
+                Les requetes API doivent etre restreintes aux adresses IP et utilisateurs autorisés, et toutes les communications avec l'API doivent etre protégées par TLS, avec une authentification forte en place.
+
+            - **Utilisation des images de pods non vulnérables** : 
+                Toutes les images déployées dans le cluster doivent avoir passé un scan de sécurité pour garantir qu'elles ne contiennent pas de failles connues. Les images vulnérables doivent être rejetées et remplacées par des versions corrigées.
 
     - ### 4.2 Application des mesures de sécurité recommandées
         - #### 4.2.1 Configuration des outils de sécurité (pare-feu, contrôle d'accès, etc.)
