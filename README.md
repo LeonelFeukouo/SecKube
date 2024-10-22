@@ -454,6 +454,8 @@
 
             Compte tenu de ces informations, essayons de lister les Pods dans l'espace de nom deploy en ajoutant **-n deploy** à la commande :
 
+                kubectl get pods -n deploy
+
             ![Get pods deploy](./images/Hack_get_pods_deploy.PNG)
 
             Succès ! C'est le pod que nous avons attaqué avec notre exploit RCE.
@@ -482,9 +484,11 @@
 
             Tout d'abord, exécutons le Pod wordpress et voyons ce qui est disponible pour nous. 
 
+                kubectl exec -n deploy -it wordpress-<id_pod> -- bash
+
             ![](./images/exec_wordpress1.PNG)
 
-            Maintenant que nous avons un shell dans le Pod, voyons si nous sommes (ou pouvons devenir) root. Vérifions notre utilisateur avec whoami :
+            Maintenant que nous avons un shell dans le Pod, voyons si nous sommes (ou pouvons devenir) root. Vérifions notre utilisateur avec **whoami** :
 
             ![](./images/user_pod.PNG)
 
@@ -532,6 +536,8 @@
 
             Cette image contient sudo, mais malgré ce que dit l'invite de connexion, si nous essayons d'exécuter **sudo ls**, nous obtenons l'erreur suivante :
 
+                sudo ls
+
             ![](./images/error_sudo.PNG)
 
             En effet, les paramètres securityContext du manifeste Pod sont définis sur **allowPrivilegeEscalation : false** pour satisfaire la PSA.
@@ -576,6 +582,10 @@
             Cette commande laissera le Shell du conteneur SNYKY en suspend.
 
             Dans un nouveau shell, définissons notre variable de configuration Kubernetes et créons un **port-forward** dans le pod snyky :
+
+                export KUBECONFIG=kubeconfig
+
+                kubectl port-forward snyky 5001 -n deploy
 
             ![](./images/port_forward.PNG)
 
@@ -800,6 +810,8 @@
 
             ![](./images/Get_nodes.png)
 
+            ![](./images/etcdclient_get_secrets.PNG)
+
             
     - ### Conclusion
         Ce chapitre a décrit le développement et le déploiement de l'architecture non sécurisée, ainsi que les résultats des tests de pénétration initiaux. Ces résultats serviront de référence pour la mise en œuvre des mesures de sécurité décrites dans le prochain chapitre.
@@ -859,14 +871,89 @@
                 Toutes les images déployées dans le cluster doivent avoir passé un scan de sécurité pour garantir qu'elles ne contiennent pas de failles connues. Les images vulnérables doivent être rejetées et remplacées par des versions corrigées.
 
     - ### 4.2 Application des mesures de sécurité recommandées
-        - #### 4.2.1 Configuration des outils de sécurité (pare-feu, contrôle d'accès, etc.)
-            Les outils de sécurité suivants ont été configurés :
-            - Role-Based Access Control (RBAC) pour gérer les permissions.
-            - Politiques de réseau pour restreindre les communications entre les pods.
-            - Kubernetes Secrets pour stocker et gérer les informations sensibles.
+        L'application des mesures de sécurité dans un environnement Kubernetes est une étape critique pour protéger le cluster contre les menaces externes et internes. Cette section détaille les différentes étapes de la mise en œuvre des recommandations de sécurité identifiées, qui incluent la mise à jour du cluster, la configuration des contrôles d'accès (RBAC), la sécurisation des communications réseau, la gestion des secrets, la sécurité des pods, et la protection de l'API Kubernetes.
+
+        - #### 4.2.1 Configuration des fonctionnalités de sécurité
+            Pour protéger le cluster Kubernetes contre les attaques, plusieurs fonctionnalités et configurations de sécurité doivent être mis en place. Ces configurations sont essentielles pour restreindre les accès, sécuriser les communications, et garantir la bonne gestion des ressources sensibles. 
+            
+            - **Mise à jour de Kubernetes vers la dernière version stable et sécurisée**
+            
+                En suivant les etapes recommandees sur le site officiel de Kubernetes, nous avons mis a jour le cluster vers la dernier version de kubernetes stable et securisee.
+
+                Lien officiel pour mettre a jour un cluster Kubernetes:
+                https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/
+
+                Ces etapes permettant la mise a jour du control plane et des workers nodes separement, incluent la migration de docker a containerd pour la gestion des containers, la mise a jour de kubeadm pour gerer le cluster, de kubectl pour interagir avec l'api kubernetes, ainsi que du kubelet pour assurer les communications entre les workers nodes et le control plane.
+
+                ![](./images/Get_nodes_update.PNG)
+
+                ![](./images/get_secrets_etcd_update.PNG)
+                a - g
+
+            - **Mise en place de Network Policies pour restreindre les communications entre les pods**
+
+                Lors du test de penetration, nous avons pu utiliser l'outil NMAP pour scanner le reseau de pod depuis un autre pod. 
+
+                Pour empêcher toute communication réseau entre les pods des namespaces default et deploy, nous utilisons les NetworkPolicies. Ces policies nous permettent de définir les règles de communication réseau au niveau des namespaces et des pods dans Kubernetes.
+
+                Pour ce faire, nous configurons deux NetworkPolicies distinctes dans chaque namespace (default et deploy) pour bloquer toute communication entrante et sortante entre les pods des deux namespaces.
+
+                Les configurations YAML de ces Networks policies sont les suivantes :
+
+                dans le namespace default
+                ![](./images/network_default.PNG)
+
+                dans le namespace deploy
+                ![](./images/network_deploy.PNG)
+
+                Avant d'appliquer ces NetworkPolicies, il est nessecaire d'affecter des labels au differents namespace comme ceci.
+
+                    kubectl label namespace default name=default
+
+                    kubectl label namespace deploy name=deploy
+
+                Ensuite, nous appliquons les politiques reseaux.
+
+                    kubectl apply -f network_default.yaml
+                    kubectl apply -f network_deploy.yaml
+                
+                ![](./images/Network_Policies.PNG)
+
+            - **Amélioration des politiques de sécurité des pods**
+
+            - **Implémentation de RBAC (Role-Based Access Control)**
+
+                Lors de la phase de test de penetration, nous avons constatee que, a partir d'un service account vulnerable, un attanquant pouvait effectuer des actions de lecture et de modification dans le cluster.
+
+                Pour palier a ce probleme, nous implementons un role pour chaque service account du cluster, afin d'empecher ces derniers d'effectuer des actions non souhaitee :
+
+                Etant donne que nous travaillons dans le namespace par defaut et le namespace deploy, la liste des service accounts dans ces deux namespace est la suivante:
+
+                ![](./images/sa_projet.PNG)
+
+                Le role permettant de restreindre les permissions du service account par defaut **default** est le suivant: 
+
+                ![](./images/role_sa_default.PNG)
+
+                Nous pouvons l'appliquer avec la commande suivante:
+
+                    kubectl apply -f rbac_default.yaml
+
+                Le role permettant de restreindre les permissions du service account wordpress est le suivant: 
+
+                ![](./images/role_sa_wordpress.PNG)
+
+                Nous pouvons l'appliquer avec la commande suivante:
+
+                    kubectl apply -f rbac_wordpress.yaml
+            
+
+            - **Mise en place de Kubernetes Secrets pour stocker et gérer les informations sensibles**
+            - **Sécurisation de l'API Kubernetes**
+            - **Scan de l'image de pod**
 
         - #### 4.2.2 Mise en place de la surveillance et de l'audit
-            Des systèmes de surveillance et d'audit ont été mis en place pour détecter et répondre aux menaces en temps réel. Cela inclut :
+            La surveillance et l’audit sont essentiels pour garantir une visibilité en temps réel des événements qui se produisent dans le cluster. Une surveillance proactive permet de détecter et de réagir rapidement aux comportements anormaux et aux tentatives d'attaque. Cela inclut :
             - L'intégration de Prometheus pour la surveillance des performances.
             - L'utilisation de Fluentd pour la gestion des logs et l'audit.
 
