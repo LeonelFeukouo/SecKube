@@ -786,25 +786,19 @@
 
             ![](./images/cmd_cat_token.PNG)
 
-            **c- L'acces en ecriture aux pods du cluster par un utilisateur connectee a partir du shell**
-
-            Lors des tests, il a été découvert qu'un utilisateur ayant accès au shell pouvait modifier ou écrire dans des pods, même s'il n'était pas censé avoir ces permissions. Cela représente un risque élevé d'escalade de privilèges ou de modification non autorisée des applications déployées. Cette vulnérabilité est généralement due à une mauvaise configuration des permissions RBAC ou à des privilèges trop étendus accordés aux utilisateurs du cluster. Un utilisateur malveillant pourrait modifier des configurations critiques, déployer des conteneurs malveillants ou altérer le fonctionnement normal des services du cluster, entraînant des interruptions ou compromettant la sécurité des données.
-
-            ![](./images/cmd_touch.PNG)
-
-            **d- L'absence de restrictions de réseau permettant une communication non sécurisée entre les pods**
+            **c- - L'absence de restrictions de réseau permettant une communication non sécurisée entre les pods**
 
             Dans l'architecture actuelle, il n'existe pas de restrictions de communication réseau entre les pods. Cela signifie que tous les pods peuvent librement communiquer entre eux, ce qui augmente le risque de propagation d'attaques internes. Par défaut, Kubernetes permet à tous les pods d'un cluster de communiquer entre eux sans restrictions. Sans l'implémentation de **Network Policies**, il n'y a pas de contrôle granulaire sur les communications entre les pods. Un attaquant ayant compromis un seul pod pourrait facilement se déplacer dans le réseau interne et attaquer d'autres pods, escaladant potentiellement ses privilèges ou compromettant davantage de ressources.
 
             ![](./images/scan_nmap.PNG)
 
-            **e- L'accès non autorisé à certains services**
+            **d- L'accès non autorisé à certains services**
 
             Certains services critiques du cluster sont exposés sans authentification ni autorisation. Cela inclut potentiellement l'accès à des bases de données, des API, ou d'autres services internes. Cette vulnérabilité est souvent due à une mauvaise configuration des accès API ou à l'absence de restrictions RBAC (Role-Based Access Control) pour contrôler qui peut interagir avec les ressources du cluster. Un accès non autorisé à ces services permettrait à un attaquant de lire, modifier ou détruire des données sensibles, compromettant ainsi l'intégrité et la confidentialité des informations.
 
             ![](./images/cmd_curl_endpoints.PNG)
 
-            **f- L'utilisation de versions obsolètes de Kubernetes**
+            **e- L'utilisation de versions obsolètes de Kubernetes**
 
             Le cluster utilise une version de Kubernetes (v1.23.7) qui présente des vulnérabilités connues, permettant à un attaquant d'exploiter des failles pour accéder à certaines ressources ou contourner des restrictions de sécurité mises à jour dans les versions récentes. Cette utilisation de versions obsoletes est causee par l'absence de mises à jour régulières du cluster Kubernetes et de ses composants critiques. Les versions obsolètes sont particulièrement vulnérables aux attaques connues et aux exploits publiés. L'utilisation de versions obsolètes permettrait à des attaquants d'exploiter des vulnérabilités corrigées dans les versions plus récentes, compromettant ainsi la sécurité globale du cluster.
 
@@ -834,9 +828,6 @@
 
             - **Configuration des politiques de réseau pour restreindre les communications entre les pods** : 
                 Réduire la surface d'attaque en isolant les pods critiques et en autorisant uniquement les communications nécessaires est une mesure essentielle pour empêcher les attaques internes.
-
-            - **Amélioration des politiques de sécurité des pods** : 
-                Bien que moins urgente que les mises à jour et RBAC, empêcher la modification des pods est crucial pour éviter l'altération malveillante des applications et des données, ou une elevation de privilèges.
             
             - **Sécurisation des données sensibles, telles que les service accounts et les secrets** :
                 La sécurisation des secrets et des service accounts est critique, car elle protège les informations d'identification sensibles, comme les tokens d'accès API, les mots de passe, ou les certificats. 
@@ -857,9 +848,6 @@
 
             - **Prévention des communications non sécurisées entre les pods (Network Policies)** : 
                 Les Network Policies doivent être en place pour empêcher toute communication non autorisée entre les pods. Les tests de réseau doivent montrer que seuls les pods autorisés peuvent échanger des données entre eux, selon les règles définies.
-
-            - **Incapacité de modifier le système de fichiers d'un pod** : 
-                Les pods doivent être configurés de manière à ce qu'aucun utilisateur ou processus non autorisé ne puisse modifier leur système de fichiers ou leurs ressources internes. Des tests d'intégrité doivent vérifier que les systèmes de fichiers sont protégés contre toute modification malveillante.
 
             - **Protection efficace des données sensibles** : 
                 Les secrets, tokens de service accounts, et autres données sensibles doivent être stockés de manière sécurisée et accessibles uniquement aux entités autorisées. Des audits de sécurité doivent prouver que les données sensibles ne sont pas exposées ou vulnérables aux attaques.
@@ -894,38 +882,34 @@
 
                 Lors du test de penetration, nous avons pu utiliser l'outil NMAP pour scanner le reseau de pod depuis un autre pod. 
 
-                Pour empêcher toute communication réseau entre les pods des namespaces default et deploy, nous utilisons les NetworkPolicies. Ces policies nous permettent de définir les règles de communication réseau au niveau des namespaces et des pods dans Kubernetes.
+                Pour empêcher toute communication réseau entre les pods des namespaces default et deploy, nous utilisons un NetworkPolicy. Cette politique nous permet de définir les règles de communication réseau au niveau des namespaces et des pods dans Kubernetes.
 
-                Pour ce faire, nous configurons deux NetworkPolicies distinctes dans chaque namespace (default et deploy) pour bloquer toute communication entrante et sortante entre les pods des deux namespaces.
+                Pour ce faire, en se basans sur le site officiel de Kubernetes, nous configurons un NetworkPolicy general que nous appliquons dans chaque namespace (default et deploy) afin de bloquer toute communication entrante et sortante entre les pods des deux namespaces.
 
-                Les configurations YAML de ces Networks policies sont les suivantes :
+                https://kubernetes.io/docs/concepts/services-networking/network-policies/
 
-                dans le namespace default
+                La configuration YAML de ce Network policy est le suivant :
+
                 ![](./images/network_default.PNG)
 
-                dans le namespace deploy
-                ![](./images/network_deploy.PNG)
-
-                Avant d'appliquer ces NetworkPolicies, il est nessecaire d'affecter des labels au differents namespace comme ceci.
-
-                    kubectl label namespace default name=default
-
-                    kubectl label namespace deploy name=deploy
-
-                Ensuite, nous appliquons les politiques reseaux.
+                Ensuite, nous appliquons la politique reseaux a nos namespaces default et deploy.
 
                     kubectl apply -f network_default.yaml
-                    kubectl apply -f network_deploy.yaml
+                    
+                    kubectl apply -f network_default.yaml -n deploy
                 
                 ![](./images/Network_Policies.PNG)
 
-            - **Amélioration des politiques de sécurité des pods**
+                Si l'on souhaite ajouter d'autres autorisations reseaux, il est necessaire de modifier notre YAML afin d'ajouter les regles dont on a besoin.
 
-            - **Implémentation de RBAC (Role-Based Access Control)**
+                ![](./images/scan_nmap_mitigation.PNG)
+                a - e
+
+            - **Implémentation de RBAC (Role-Based Access Control), et securisation des services account dans les pods**
 
                 Lors de la phase de test de penetration, nous avons constatee que, a partir d'un service account vulnerable, un attanquant pouvait effectuer des actions de lecture et de modification dans le cluster.
 
-                Pour palier a ce probleme, nous implementons un role pour chaque service account du cluster, afin d'empecher ces derniers d'effectuer des actions non souhaitee :
+                Pour palier a ce probleme, nous implementons un role pour chaque service account du cluster, afin d'empecher ces derniers d'effectuer des actions non souhaitee.
 
                 Etant donne que nous travaillons dans le namespace par defaut et le namespace deploy, la liste des service accounts dans ces deux namespace est la suivante:
 
@@ -935,20 +919,26 @@
 
                 ![](./images/role_sa_default.PNG)
 
-                Nous pouvons l'appliquer avec la commande suivante:
+                Nous pouvons l'appliquer avec les commandes suivantes:
 
                     kubectl apply -f rbac_default.yaml
 
-                Le role permettant de restreindre les permissions du service account wordpress est le suivant: 
+                    kubectl apply -f rbac_default.yaml -n deploy
+
+                Le role permettant de restreindre les permissions du service account **wordpress** est le suivant: 
 
                 ![](./images/role_sa_wordpress.PNG)
 
-                Nous pouvons l'appliquer avec la commande suivante:
+                Nous pouvons l'appliquer avec les commandes suivantes:
 
                     kubectl apply -f rbac_wordpress.yaml
-            
 
-            - **Mise en place de Kubernetes Secrets pour stocker et gérer les informations sensibles**
+                    kubectl apply -f rbac_wordpress.yaml -n deploy
+
+                ![](./images/roles_apply.PNG)
+
+                a - c(d)
+
             - **Sécurisation de l'API Kubernetes**
             - **Scan de l'image de pod**
 

@@ -1,14 +1,9 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: block-to-deploy
-  namespace: default
+  name: block-all
 spec:
   podSelector: {}
   policyTypes:
+  - Ingress
   - Egress
-  egress:
-  - to:
-    - namespaceSelector:
-        matchLabels:
-          name: deploy
