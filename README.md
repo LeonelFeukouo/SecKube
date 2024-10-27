@@ -882,25 +882,37 @@
 
                 Lors du test de penetration, nous avons pu utiliser l'outil NMAP pour scanner le reseau de pod depuis un autre pod. 
 
-                Pour empêcher toute communication réseau entre les pods des namespaces default et deploy, nous utilisons un NetworkPolicy. Cette politique nous permet de définir les règles de communication réseau au niveau des namespaces et des pods dans Kubernetes.
+                Pour empêcher toute communication réseau entre les pods des namespaces default et deploy, nous utilisons les **NetworkPolicy**. Ces politiques nous permettent de définir les règles de communication réseau au niveau des namespaces et des pods dans Kubernetes.
 
-                Pour ce faire, en se basans sur le site officiel de Kubernetes, nous configurons un NetworkPolicy general que nous appliquons dans chaque namespace (default et deploy) afin de bloquer toute communication entrante et sortante entre les pods des deux namespaces.
+                Pour ce faire, en se basans sur le site officiel de Kubernetes, nous configurons deux **NetworkPolicy** que nous appliquons dans les namespaces (default et deploy) afin de bloquer toute communication entrante et sortante entre les pods des deux namespaces.
 
                 https://kubernetes.io/docs/concepts/services-networking/network-policies/
 
-                La configuration YAML de ce Network policy est le suivant :
+                La configuration YAML du Networkpolicy du namespace par defaut est la suivante :
 
                 ![](./images/network_default.PNG)
 
-                Ensuite, nous appliquons la politique reseaux a nos namespaces default et deploy.
+                Nous l'appliquons a l'aide de la commande suivante :
 
                     kubectl apply -f network_default.yaml
-                    
-                    kubectl apply -f network_default.yaml -n deploy
                 
-                ![](./images/Network_Policies.PNG)
+                ![](./images/network_default_apply.PNG)
+                
+                La configuration YAML du Networkpolicy du namespace deploy est la suivante :
 
-                Si l'on souhaite ajouter d'autres autorisations reseaux, il est necessaire de modifier notre YAML afin d'ajouter les regles dont on a besoin.
+                ![](./images/network_deploy.PNG)
+
+                NB: La regle qui apparait dans ce networkpolicy permet uniquement de laisser passer tout traffic venant des services kubernetes, comme c'est le cas avec le service qui permet l'acces a notre application.
+
+                ![](./images/service_wordpress.PNG)
+
+                Nous l'appliquons a l'aide de la commande suivante :
+
+                    kubectl apply -f network_deploy.yaml
+                
+                ![](./images/network_deploy_apply.PNG)
+
+                Si l'on souhaite ajouter d'autres autorisations reseaux, il est necessaire de modifier les fichiers YAML afin d'ajouter les regles dont on a besoin.
 
                 ![](./images/scan_nmap_mitigation.PNG)
                 a - e
@@ -909,7 +921,17 @@
 
                 Lors de la phase de test de penetration, nous avons constatee que, a partir d'un service account vulnerable, un attanquant pouvait effectuer des actions de lecture et de modification dans le cluster.
 
-                Pour palier a ce probleme, nous implementons un role pour chaque service account du cluster, afin d'empecher ces derniers d'effectuer des actions non souhaitee.
+                Ces actions etaient possibles, car des autorisations avec des privileges elevees avaient ete donne aux differents services accounts des namespaces default de deploy.
+
+                Pour palier a ces problemes, nous allons tout d'abord suprimmer tous les roles et rolebindings qui ont ete prealablement defini, et par la suite nous creerons de nouveaux roles strictes que nous implementerons pour chaque service account du cluster, afin d'empecher ces derniers d'effectuer des actions non souhaitee.
+
+                La liste des elements a supprimer est la suivante :
+
+                ![](./images/role_delete.PNG)
+
+                Nous les supprimons comme suit :
+
+                ![](./images/role_delete_ok.PNG)
 
                 Etant donne que nous travaillons dans le namespace par defaut et le namespace deploy, la liste des service accounts dans ces deux namespace est la suivante:
 
@@ -924,6 +946,8 @@
                     kubectl apply -f rbac_default.yaml
 
                     kubectl apply -f rbac_default.yaml -n deploy
+                
+                ![](./images/apply_role_default.PNG)
 
                 Le role permettant de restreindre les permissions du service account **wordpress** est le suivant: 
 
@@ -934,10 +958,45 @@
                     kubectl apply -f rbac_wordpress.yaml
 
                     kubectl apply -f rbac_wordpress.yaml -n deploy
+                
+                ![](./images/apply_role_wordpress.PNG)
 
-                ![](./images/roles_apply.PNG)
 
+                ![](./images/secret_not_allowed.PNG)
                 a - c(d)
+
+
+                La plupart des applications ne font pas d'appels à l'API Kubernetes, donc le comportement par défaut qui consiste à monter automatiquement le jeton ServiceAccount dans le système de fichiers de chaque Pod est au mieux problématique. Corrigeons cela en définissant explicitement **automountServiceAccountToken : false** à chaque fois que nous créons un ServiceAccount.
+
+                Puisque dans notre cas les service account ont deja ete cree, nous allons juste les editer pendant leur execution, et appliquer le parametre precedent.
+
+                La liste des service accounts a editer est la suivante :
+
+                ![](./images/sa_projet.PNG)
+
+                Dans le namespace par defaut, modifions les services account comme suit:
+
+                    kubectl edit serviceaccount default
+                
+                ![](./images/edit_sa_default_default.PNG)
+
+                    kubectl edit serviceaccount wordpress
+                
+                ![](./images/edit_sa_wordpress_default.PNG)
+
+                Dans le namespace deploy, modifions les services account comme suit:
+
+                    kubectl edit serviceaccount default -n deploy
+
+                ![](./images/edit_sa_default_deploy.PNG)               
+
+                    kubectl edit serviceaccount wordpress -n deploy
+
+                ![](./images/edit_sa_wordpress_deploy.PNG)
+
+
+                ![](./images/sa_secure.PNG)
+                a - b
 
             - **Sécurisation de l'API Kubernetes**
             - **Scan de l'image de pod**
