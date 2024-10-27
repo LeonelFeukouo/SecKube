@@ -999,6 +999,25 @@
                 a - b
 
             - **Sécurisation de l'API Kubernetes**
+
+            Pour restreindre l’accès à l’API Kubernetes, nous utilisons un pare-feu, car il est tres important de contrôler les connexions vers le port de l’API server (par défaut, 6443 sur le master Kubernetes). Voici comment nous pouvons configurer notre pare-feu est basé sur firewalld.
+
+            Une fois que le paquet firewalld est installee, nous devons définir les adresses IP ou plages d’IP autorisées à accéder à l’API Kubernetes, ainsi que le port sur lequel le trafic sera autorisee.
+
+            Les commandes suivantes permettens d'autoriser l'adresse IP de la machine master uniquement, ainsi que le port 6443.
+
+                sudo firewall-cmd --zone=trusted --add-port=6443/tcp --permanent
+
+                sudo firewall-cmd --zone=trusted --add-source=192.168.115.10 --permanent
+
+                sudo firewall-cmd --reload
+            
+            ![](./images/firewall.PNG)
+
+
+            ![](./images/firewall_mitigation.PNG)
+            
+
             - **Scan de l'image de pod**
 
         - #### 4.2.2 Mise en place de la surveillance et de l'audit

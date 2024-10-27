@@ -5,6 +5,7 @@ metadata:
   name: no-access-role
 rules: []
 
+---
 # RoleBinding pour associer le service account par défaut au Role sans permission
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
