@@ -927,13 +927,39 @@
 
                 La liste des elements a supprimer est la suivante :
 
+                    kubectl get roles
+
+                    kubectl get rolebinding
+
+                    kubectl get roles -n deploy
+
+                    kubectl get rolebinding -n deploy
+
                 ![](./images/role_delete.PNG)
 
                 Nous les supprimons comme suit :
 
+                    kubectl delete role allow_endpoint_access
+
+                    kubectl delete role allow_pod_read
+
+                    kubectl delete rolebinding allow_endpoint_access_bind
+
+                    kubectl delete rolebinding allow_pod_read_bind
+
+                    kubectl delete rolebinding psp:any:defaultpriv
+
+                    kubectl delete role allow_pod_read -n deploy
+
+                    kubectl delete rolebinding allow_pod_read_bind -n deploy
+
                 ![](./images/role_delete_ok.PNG)
 
                 Etant donne que nous travaillons dans le namespace par defaut et le namespace deploy, la liste des service accounts dans ces deux namespace est la suivante:
+
+                    kubectl get serviceaccount
+
+                    kubectl get serviceaccount -n deploy
 
                 ![](./images/sa_projet.PNG)
 
@@ -1002,13 +1028,17 @@
 
             Pour restreindre l’accès à l’API Kubernetes, nous utilisons un pare-feu, car il est tres important de contrôler les connexions vers le port de l’API server (par défaut, 6443 sur le master Kubernetes). Voici comment nous pouvons configurer notre pare-feu est basé sur firewalld.
 
-            Une fois que le paquet firewalld est installee, nous devons définir les adresses IP ou plages d’IP autorisées à accéder à l’API Kubernetes, ainsi que le port sur lequel le trafic sera autorisee.
+            Une fois que le paquet firewalld est installee, nous devons définir les adresses IP ou plages d’IP autorisées à accéder au cluster Kubernetes, ainsi que le port sur lequel le trafic sera autorisee.
 
-            Les commandes suivantes permettens d'autoriser l'adresse IP de la machine master uniquement, ainsi que le port 6443.
+            Les commandes suivantes permettens d'autoriser les adresses IP des machines master, worker1 et worker2, ainsi que le port 6443.
 
                 sudo firewall-cmd --zone=trusted --add-port=6443/tcp --permanent
 
                 sudo firewall-cmd --zone=trusted --add-source=192.168.115.10 --permanent
+
+                sudo firewall-cmd --zone=trusted --add-source=192.168.115.11 --permanent
+
+                sudo firewall-cmd --zone=trusted --add-source=192.168.115.12 --permanent
 
                 sudo firewall-cmd --reload
             
@@ -1016,7 +1046,7 @@
 
 
             ![](./images/firewall_mitigation.PNG)
-            
+
 
             - **Scan de l'image de pod**
 
