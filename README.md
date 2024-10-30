@@ -1050,6 +1050,46 @@
 
             - **Scan de l'image de pod**
 
+            L'image suivante nous montre que depuis le debut nous travaillons avec une image non officielle de Wordpress, et dans ce cas il est tres fort probable qu'elle contienne des vulnerabilites.
+
+            ![](./images/docker_hub_no_official.PNG) 
+
+            En analysant un peu plus cette image non officielle sur le site hub.docker.com, le fichier nommee **app.py** est lancee a chaque demarrage d'un pod a partir de l'image **leonelfeukouo/worbprezz:latest**, comme le montre l'image suivante.
+
+            ![](./images/docker_hub_cmd.PNG)
+
+            Lorsque nous essayons de nous connecter a un pod executant l'image, on peut constater que, la soit disante application wordpress est en effet une application **Flask** contenant deux pages web, une statique dont le but est de tromper l'utilisateur en lui faisant croire qu'il s'agit reellement de wordpress, et une autre page qui permet d'executer des commandes shell arbitraire a partir de l'url.
+
+            ![](./images/content_worbprezz.PNG)
+
+            Nous pouvons aussi remarquer la facon dont wordpress est ecrit dans le nom de l'image. C'est ecrit avec un **B** miniscule et deux **Z** miniscule. Hors, l'orthographe correcte est **wordpress** en miniscule et **WORDPRESS** en majuscule.
+
+            Pour palier a ce probleme, il est important de toujours veiller a ce que les images que nous utilisons proviennent d'un fournisseur officiel d'images, comme le montre cette image.
+
+            ![](./images/docker_hub_official.PNG)
+
+            Pour utiliser cette nouvelle image officielle, nous modifions juste notre fichier YAML du deploiement que nous avons precedement executee comme suit.
+
+            ![](./images/Wordpress_deployment_real.png)
+
+            Pour l'executer, nous supprimons tout d'abord l'ancien deploiement, et nous creons le nouveau.
+
+                kubectl delete -f wordpress_deployment.yaml -n deploy
+
+                kubectl delete service -n deploy wordpress
+
+                kubectl apply -f wordpress_deployment.yaml -n deploy
+
+                kubectl expose deployment wordpress -n deploy --type=NodePort
+
+                kubectl get all -n deploy
+
+            ![](./images/Apply_wordpress_deploy_ok.png)
+
+            ![](./images/Accueil_wordpress_ok.png)
+            a
+
+
         - #### 4.2.2 Mise en place de la surveillance et de l'audit
             La surveillance et l’audit sont essentiels pour garantir une visibilité en temps réel des événements qui se produisent dans le cluster. Une surveillance proactive permet de détecter et de réagir rapidement aux comportements anormaux et aux tentatives d'attaque. Cela inclut :
             - L'intégration de Prometheus pour la surveillance des performances.
