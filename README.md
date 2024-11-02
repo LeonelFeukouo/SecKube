@@ -1198,6 +1198,46 @@
 
             Le fichier suivant montre le contenu modifié du fichier de configuration du serveur API.
 
+            ![](./images/kube_apiserver1.PNG)
+            ![](./images/kube_apiserver2.PNG)
+            ![](./images/kube_apiserver3.PNG)
+
+            Une fois le fichier configuree, il suffit juste de le sauvegarder, et les logs commenceront a etre collectionee.
+
+            Afin de verifier le fonctionnement, nous creeons un simple pod nginx, et nous verifions les logs.
+
+                kubectl run nginx --image=nginx
+
+                cat /var/log/kubernetes/audit/audit.log
+        
+        - #### 4.2.3 Autres moyens de securites (KUBE-BENCH)
+
+            Un autre moyen d'ameliorer la securitee du cluster est d'utiliser l'outil kube-bench pour vérifier les composants d'un cluster Kubernetes par rapport aux meilleures pratiques du CIS (Center for Internet Security) Benchmark de manière automatisée. Kube-bench peut être exécuté de différentes manières. Par exemple, nous pouvons l'installer en tant que binaire spécifique à une plateforme sous la forme d'un fichier RPM ou Debian. La manière la plus pratique et la plus directe d'exécuter le processus de vérification consiste à exécuter kube-bench dans un Pod directement sur le cluster Kubernetes. Pour cela, créons un objet Job à l'aide d'un manifeste YAML vérifié dans le dépôt GitHub de l'outil.
+
+            Commencons par créer le Job à partir du fichier job-master.yaml, ou job-node.yaml selon que nous souhaitons inspecter un noeud master ou un noeud worker. Nous nous consacrerons uniquement a utiliser kube-bench dans la machine master, car la procedure pour les noeuds worker est la meme.
+
+            La commande suivante exécute les contrôles de vérification sur le nœud du plan de contrôle :
+
+                kubectl apply -f https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job-master.yaml
+            
+            ![](./images/create_kube_bench.PNG)
+            
+            Lors de l'exécution du Job, le Pod correspondant qui exécute le processus de vérification peut être identifié par son nom dans l'espace de noms par défaut. Le nom du Pod commence par le préfixe kube-bench, suivi du type du nœud et d'un hachage à la fin. 
+
+            ![](./images/kube_bench_ok.PNG)
+
+            Une fois executee, attendons que le pod passe à l'état « Completed » pour nous assurer que toutes les vérifications sont terminées. nous pouvons jeter un coup d'œil au résultat du benchmark en consultant les logs du Pod :
+
+                kubectl logs kube-bench-master-57cp2
+            
+            ![](./images/log_kube_bench1.PNG)
+
+            ![](./images/log_kube_bench2.PNG)
+
+            Apres consultation des logs de kube-bench, nous effectuons toutes les recommandations qui sont dite a l'interieur de ces logs, puis nous executons kube-bench a nouveau et obtenons le resultat suivant :   
+
+            
+
     - ### Conclusion
         Ce chapitre a détaillé les mesures de sécurité mises en place pour renforcer l'architecture Kubernetes initiale. Ces mesures devraient améliorer considérablement la sécurité de l'environnement.
 
