@@ -1048,7 +1048,7 @@
             ![](./images/firewall_mitigation.PNG)
 
 
-            - **Scan de l'image de pod**
+            - **Analyse de l'image de pod**
 
             L'image suivante nous montre que depuis le debut nous travaillons avec une image non officielle de Wordpress, et dans ce cas il est tres fort probable qu'elle contienne des vulnerabilites.
 
@@ -1089,11 +1089,114 @@
             ![](./images/Accueil_wordpress_ok.png)
             a
 
+            Il est aussi possible d'utiliser un outil des scan d'image de container tel que **TRIVY**, afin de detecter les vulnerabilites presente dans les librairies installee dans l'image.
+
+            La commande suivante permet de l'installer :
+
+                sudo apt install trivy -y
+
+            Une fois installe, on peut obtenir sa version comme dans l'image suivante :
+
+            ![](./images/trivy_version.PNG)
+
+            Le scan de notre image vulnerable avec TRIVY nous renvoie la sortie suivante :
+
+            ![](./images/trivy_scan.PNG)
+
+            Les resultats de trivy sont basees sur les paquets qui sont installee dans l'image. Il est necessaire de veiller a ce que aucun paquet ne puisse etre a l'origine d'une attaque dans notre cluster.
 
         - #### 4.2.2 Mise en place de la surveillance et de l'audit
-            La surveillance et l’audit sont essentiels pour garantir une visibilité en temps réel des événements qui se produisent dans le cluster. Une surveillance proactive permet de détecter et de réagir rapidement aux comportements anormaux et aux tentatives d'attaque. Cela inclut :
-            - L'intégration de Prometheus pour la surveillance des performances.
-            - L'utilisation de Fluentd pour la gestion des logs et l'audit.
+            Outre la gestion et la mise à niveau d'un cluster Kubernetes, l'administrateur est chargé de garder un œil sur les activités potentiellement malveillantes. Bien qu'il soit possible d'effectuer cette tâche manuellement en se connectant aux nœuds du cluster et en observant les processus au niveau de l'hôte et du conteneur, il s'agit d'une entreprise terriblement inefficace.
+
+            L'analyse des comportements consiste à observer les nœuds de la grappe pour détecter toute activité qui semble sortir de l'ordinaire. Un processus automatisé permet de filtrer, d'enregistrer et d'alerter les événements présentant un intérêt particulier.
+
+            Afin de detecter les menaces en observant les activites au niveau de l'hote et du container nous avons optee pour l'outil **Falco**. Avec ce dernier, nous pouvons relever les activites telles que, la lecture et l'ecriture d'un fichier a un endroit specifique du systeme, l'ouverture d'un shell dans un container (/bin/bash), des tentatives d'appel reseau vers des URLs nos desiree.
+
+            Falco déploie un ensemble de capteurs qui écoutent les événements et les conditions configurés. Chaque capteur est constitué d'un ensemble de règles qui associent un événement à une source de données. Une alerte est produite lorsqu'une règle correspond à un événement spécifique. Les alertes sont envoyées à un canal de sortie pour enregistrer l'événement, tel que la sortie standard, un fichier ou un point de terminaison HTTPS. Falco permet d'activer plusieurs canaux de sortie simultanément. La figure suivante présente l'architecture de haut niveau de Falco.
+
+            ![](./images/falco_architecture.PNG)
+
+            Nous pouvons installer FALCO a l'aide des commandes suivante:
+
+                curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | sudo gpg --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
+
+                echo "deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main" | sudo tee -a /etc/apt/sources.list.d/falcosecurity.list
+
+                sudo apt-get install apt-transport-https
+
+                sudo apt-get update -y
+
+                sudo apt install -y dkms make linux-headers-$(uname -r)
+
+                sudo apt install -y clang llvm
+
+                sudo apt install -y dialog
+
+                sudo apt-get install -y falco
+            
+            Lors de l'installation, nous choisissons les options comme dans les images suivantes, afin que tout se configure automatiquement.
+
+            ![](./images/falco_installation.PNG)
+
+            ![](./images/falco_ruleset.PNG)
+
+
+            Une fois installee, nous pouvons verifier son fonctionnement a l'aide de la commande suivante : 
+
+                sudo systemctl status falco
+            
+            ![](./images/falco_running.PNG)
+
+            Apres avoir installee FALCO, nous pouvons essayer d'effectuer des actions dans le system comme dans l'image suivante : 
+
+            ![](./images/falco_cmd1.PNG)
+
+
+            ![](./images/log_falco1.PNG)
+
+            En executant les commandes suivantes dans le container, on obtient la sortie suivante:
+
+                root@nginx:/# apt update
+                root@nginx:/# apt install git
+
+            ![](./images/log_falco2.PNG)
+
+
+            Il est impératif pour un administrateur Kubernetes de disposer d'un enregistrement des événements qui se sont produits dans le cluster. Ces enregistrements peuvent aider à détecter une intrusion en temps réel, ou ils peuvent être utilisés pour suivre les changements de configuration à des fins de dépannage. Les journaux d'audit fournissent une vue chronologique des événements reçus par le serveur API.
+
+            ![](./images/gestion_logs.PNG)
+
+            Kubernetes peut stocker des enregistrements d'événements déclenchés par des utilisateurs finaux pour toute demande faite au serveur API ou pour des événements émis par le plan de contrôle lui-même. Les entrées du journal d'audit existent au format JSON et peuvent comprendre, sans s'y limiter, les informations suivantes :
+
+            - Quel événement s'est produit ?
+            - Qui a déclenché l'événement ?
+            - Quand a-t-il été déclenché ?
+            - Quel composant Kubernetes a traité la demande ?
+
+            Le type d'événement et les données de demande correspondantes à enregistrer sont définis par une politique d'audit. La politique d'audit est un manifeste YAML spécifiant ces règles et doit être fournie au processus du serveur API.
+
+            Le backend d'audit est responsable du stockage des événements d'audit enregistrés, tels que définis par la politique d'audit. Nous disposons de deux options configurables pour un backend :
+
+            - Un backend de journalisation, qui écrit les événements dans un fichier.
+            - Un backend webhook, qui envoie les événements à un service externe via HTTP(S) - par exemple, dans le but d'intégrer un système centralisé de journalisation et de surveillance. Un tel backend peut aider à déboguer des problèmes d'exécution tels qu'une application plantée.
+
+            ![](./images/types_logs.PNG)
+
+            Afin de Monitorer notre cluster a l'aide des logs kubernetes, il est imperatif de creer un fichier de politique d'audit et ensuite le configurer dans notre backend de journalisation.
+
+            Le fichier de politique d'audit est un manifeste YAML pour une ressource de politique. Tout événement reçu par le serveur API est comparé aux règles définies dans le fichier de politique, dans l'ordre de leur définition. L'événement est enregistré au niveau d'audit déclaré si une règle correspondante peut être trouvée.
+
+            Un exemple de fichier de politique d'audit que nous pouvons implementer dans notre cluster est le suivant :
+
+           ![](./images/audit_file.PNG)
+
+            Pour mettre en place un backend de logs basé sur des fichiers, nous devons ajouter trois éléments de configuration au fichier **/etc/kubernetes/manifests/kube-apiserver.yaml**. La liste suivante résume la configuration :
+
+            - Fournir deux parametres au processus du serveur API : le parametres **--audit-policy-file** qui pointe vers le fichier de politique d'audit, et le parametre **--audit-log-path** qui pointe vers le fichier de sortie du journal.
+            - Ajouter un chemin d'accès au volume pour le fichier de politique du journal d'audit et le répertoire de sortie du journal.
+            - Ajouter une définition de volume au chemin d'accès de l'hôte pour le fichier de stratégie du journal d'audit et le répertoire de sortie du journal.
+
+            Le fichier suivant montre le contenu modifié du fichier de configuration du serveur API.
 
     - ### Conclusion
         Ce chapitre a détaillé les mesures de sécurité mises en place pour renforcer l'architecture Kubernetes initiale. Ces mesures devraient améliorer considérablement la sécurité de l'environnement.
