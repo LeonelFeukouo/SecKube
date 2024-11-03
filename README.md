@@ -914,9 +914,6 @@
 
                 Si l'on souhaite ajouter d'autres autorisations reseaux, il est necessaire de modifier les fichiers YAML afin d'ajouter les regles dont on a besoin.
 
-                ![](./images/scan_nmap_mitigation.PNG)
-                a - e
-
             - **Implémentation de RBAC (Role-Based Access Control), et securisation des services account dans les pods**
 
                 Lors de la phase de test de penetration, nous avons constatee que, a partir d'un service account vulnerable, un attanquant pouvait effectuer des actions de lecture et de modification dans le cluster.
@@ -988,10 +985,6 @@
                 ![](./images/apply_role_wordpress.PNG)
 
 
-                ![](./images/secret_not_allowed.PNG)
-                a - c(d)
-
-
                 La plupart des applications ne font pas d'appels à l'API Kubernetes, donc le comportement par défaut qui consiste à monter automatiquement le jeton ServiceAccount dans le système de fichiers de chaque Pod est au mieux problématique. Corrigeons cela en définissant explicitement **automountServiceAccountToken : false** à chaque fois que nous créons un ServiceAccount.
 
                 Puisque dans notre cas les service account ont deja ete cree, nous allons juste les editer pendant leur execution, et appliquer le parametre precedent.
@@ -1020,10 +1013,6 @@
 
                 ![](./images/edit_sa_wordpress_deploy.PNG)
 
-
-                ![](./images/sa_secure.PNG)
-                a - b
-
             - **Sécurisation de l'API Kubernetes**
 
             Pour restreindre l’accès à l’API Kubernetes, nous utilisons un pare-feu, car il est tres important de contrôler les connexions vers le port de l’API server (par défaut, 6443 sur le master Kubernetes). Voici comment nous pouvons configurer notre pare-feu est basé sur firewalld.
@@ -1043,10 +1032,6 @@
                 sudo firewall-cmd --reload
             
             ![](./images/firewall.PNG)
-
-
-            ![](./images/firewall_mitigation.PNG)
-
 
             - **Analyse de l'image de pod**
 
@@ -1236,50 +1221,74 @@
 
             Apres consultation des logs de kube-bench, nous effectuons toutes les recommandations qui sont dite a l'interieur de ces logs, puis nous executons kube-bench a nouveau et obtenons le resultat suivant :   
 
-            
+            ![](./images/log_kube_bench3.PNG)
+
+            A ce stade, toutes les recommandations pour ameliorer la securite d'un cluster provenant de CIS ont ete mise en place.
 
     - ### Conclusion
-        Ce chapitre a détaillé les mesures de sécurité mises en place pour renforcer l'architecture Kubernetes initiale. Ces mesures devraient améliorer considérablement la sécurité de l'environnement.
+        L'application de ces mesures de sécurité, combinant la mise à jour de Kubernetes, la gestion des accès via RBAC, la mise en place de Network Policies, la sécurisation de l'API, et la surveillance active, renforce considérablement la sécurité du cluster Kubernetes. Ces actions permettent de protéger l'architecture contre les menaces internes et externes tout en assurant une traçabilité complète des événements. En utilisant des outils de monitoring et d'audit, le cluster reste sous surveillance constante, permettant une détection proactive des incidents. Nous ne pouvons pas dire que notre cluster est sure a 100%, car de nouvelles failles de securite sont decouverte tous les jours et sont encore non connues du public (ZERO-DAYS).
 
 - ## **CHAPITRE 5 : Tests et évaluation**
     - ### Introduction
-        Dans ce chapitre, nous allons évaluer l'efficacité des mesures de sécurité mises en place en effectuant des tests et en comparant les résultats avant et après sécurisation.
+        Ce chapitre présente les tests effectués pour évaluer l’efficacité des mesures de sécurité mises en œuvre dans le cluster Kubernetes. Nous commencerons par la méthodologie de test, en décrivant les types de tests de sécurité effectués pour valider la robustesse de chaque mesure. Ensuite, nous analyserons les résultats des tests pour chaque composant et fonctionnalité de sécurité, en comparant les résultats avant et après la sécurisation du cluster. Enfin, une discussion détaillée permettra d'identifier les points forts et les éventuelles faiblesses des solutions mises en place.
 
     - ### 5.1 Évaluation de la sécurité de l'architecture sécurisée mise en place
         - #### 5.1.1 Méthodologie des tests de sécurité
-            La méthodologie des tests de sécurité implique la réalisation de tests de pénétration similaires à ceux effectués sur l'architecture non sécurisée. Cela inclut :
-            - Des tests d'accès non autorisé.
-            - Des tentatives d'exécution de commandes arbitraires.
-            - Des simulations d'attaques DDoS.
+            Pour évaluer la sécurité du cluster Kubernetes, nous avons suivi une méthodologie de tests de sécurité composée des éléments suivants :
+            - **Tests de pénétration (Pentest)** : Nous avons simulee des attaques sur le cluster pour vérifier si les mesures de sécurité peuvent effectivement prévenir les accès non autorisés, les modifications malveillantes et les escalades de privilèges.
+            - **Vérifications de conformité** : Nous avons utilise un outil de benchmark comme Kube-bench pour vérifier si le cluster respecte les standards de sécurité recommandés, notamment le CIS Kubernetes Benchmark.
+            - **Surveillance et audit en temps réel** : Nous avons utilisee des outils de monitoring pour observer les réactions du cluster aux tests et vérifier si les alertes de sécurité sont déclenchées conformément aux configurations.
+            - **Analyse de vulnérabilités des images de conteneurs** : Nous avons utilisee des outils comme DockerHub et Trivy pour analyser et scanner les images de conteneurs et vérifier si des vulnérabilités connues sont détectées.
+
+            Cette méthodologie permet de tester les différentes couches de sécurité appliquées au cluster, en assurant une évaluation complète et détaillée.
 
         - #### 5.1.2 Résultats des tests de pénétration
-            Les tests de pénétration ont montré une amélioration significative de la sécurité. Par exemple :
-            - Les tentatives d'accès non autorisé ont été bloquées par RBAC.
-            - Les communications non sécurisées entre les pods ont été restreintes par les politiques de réseau.
-            - Les données sensibles ont été protégées efficacement par Kubernetes Secrets.
+            Les tests de pénétration ont été effectués pour évaluer la robustesse des configurations RBAC et de l'acces aux services accounts, des politiques de réseau, et des mesures de sécurisation de l’API Kubernetes. Voici les résultats pour chaque mesure :
+            - **RBAC (Role-Based Access Control) et services accounts** : Les tests ont démontré que seuls les utilisateurs ayant des permissions spécifiquement définies pouvaient interagir avec les ressources sensibles. Les tentatives d'acces aux ressources par les service accounts de pod ont échoué, confirmant l’efficacité de la configuration RBAC, comme le montre l'image suivante : 
+            ![](./images/secret_not_allowed.PNG) 
+            Par ailleurs, l'utilisation du parametres **automountServiceAccountToken : false** lors de la creation des service accounts, a permis de masquer les tokens des services accounts dans les pods, empechant ainsi leur utilisation par des utilisateurs malveillants, comme le montre la figure suivante : 
+            ![](./images/sa_secure.PNG)
+
+            - **Network Policies** : Les tests de communication entre les pods ont montré que les politiques de réseau empêchent les communications non autorisées. Les pods sensibles sont isolés des autres, réduisant ainsi les possibilités de mouvement latéral. Le contrôle strict des flux de données contribue à empêcher la propagation potentielle d’attaques internes dans le cluster. La figure suivante montre l'echec du scan reseaux par un pod malveillant, grace au network policies. Aucun pod n'a ete detecte, pourtant la replique de notre application tourne toujours dans le namespace par defaut. 
+            ![](./images/scan_nmap_mitigation.PNG)
+
+            - **Sécurisation de l'API Kubernetes** : Les tentatives d'accès non autorisé à l'API ont échoué grâce aux restrictions d’IP. Les logs d'audit et l'IDS ont enregistré toutes les tentatives d’accès, permettant une traçabilité complète. La sécurisation de l'API protège le point d'entrée principal du cluster, prévenant ainsi les attaques externes sur les ressources internes. La figure suivante nous montre une impossibilite d'acceder a l'API kubernetes, par un attanquant, grace a la restriction IP : 
+            ![](./images/firewall_mitigation.PNG)
+
+            - **Analyse et scan de l'image de conteneurs** : Les Analyses et scans ont permis d'identifier des vulnérabilités dans l'image. La vérification régulière des images de conteneurs limite l'introduction de logiciels vulnérables dans le cluster, protégeant ainsi les applications et les données. Apres avoir analysee l'image vulnerable, nous avons deployee l'image officielle de wordpress et on peut constater son fonctionnement comme suit, dans l'image suivante : 
+            ![](./images/Accueil_wordpress_ok.png)
 
     - ### 5.2 Comparaison des résultats avant et après sécurisation
+        La comparaison des résultats avant et après sécurisation nous permet de quantifier l’impact des mesures de sécurité appliquées. Voici les principales différences observées.
+
         - #### 5.2.1 Analyse comparative des vulnérabilités
-            L'analyse comparative des vulnérabilités a révélé que les mesures de sécurité mises en place ont réduit de manière significative les risques. Les vulnérabilités identifiées dans l'architecture initiale ont été corrigées, et l'environnement est maintenant mieux protégé contre les attaques courantes.
+            Avant la sécurisation, l’audit a révélé de nombreuses failles, telles que l’accès non authorisee à l’API, l'absence de Network Policies, et des permissions excessives via le service account par défaut des pods et des images de pods vulnerables. Après la sécurisation, la majorité des vulnérabilités critiques ont été corrigées. L’API est maintenant protégée par des regles de restrictions IP. Les Network Policies et RBAC contrôlent efficacement les flux de données et les accès aux ressources, et l'image utilisee pour deployer les pods est une image officielle reconnu par le depot officiel DockerHub.
 
         - #### 5.2.2 Mesure de la performance et de l'efficacité des mesures de sécurité
             La performance et l'efficacité des mesures de sécurité ont été mesurées en termes de réduction des vulnérabilités et d'amélioration de la résilience aux attaques. Les résultats montrent une amélioration notable de la sécurité globale de l'architecture Kubernetes.
 
+            Les mesures de sécurité appliquées n’ont pas eu d’impact notable sur la performance du cluster. Les temps de réponse des pods et des services sont été conformes aux attentes.
+
+            Les alertes et logs d’audit fonctionnent comme prévu, permettant une surveillance proactive. Les scans de conteneurs ont permis de garantir que seules des images sécurisées sont utilisées, éliminant les vulnérabilités de la chaîne d'approvisionnement logicielle.
+
     - ### 5.3 Résultats et discussion
+        Les résultats obtenus démontrent que les mesures de sécurité appliquées ont significativement renforcé la protection du cluster Kubernetes. Voici une analyse des forces, des faiblesses, et des perspectives d'amélioration :
+
         - #### 5.3.1 Présentation des résultats obtenus
-            Les résultats obtenus montrent que les mesures de sécurité mises en place ont été efficaces pour renforcer la sécurité de l'architecture Kubernetes. Les tests de pénétration ont confirmé la réduction des vulnérabilités et l'amélioration de la protection des données.
+            Les principales mesures de sécurité appliquées (RBAC, Network Policies, sécurisation de l’API et scans d'images) ont réduit la surface d’attaque et protégé les composants critiques du cluster. Les tests de pénétration ont confirmé l’efficacité des configurations pour prévenir les accès non autorisés et les attaques internes.
 
         - #### 5.3.2 Analyse des forces et des faiblesses de l'approche adoptée
-            L'approche adoptée présente plusieurs forces, notamment l'utilisation de RBAC, des politiques de réseau, et des Kubernetes Secrets. Cependant, certaines faiblesses subsistent, telles que la complexité de la gestion des politiques de réseau et la nécessité de mises à jour régulières des outils de sécurité.
+            L'approche adoptée présente plusieurs forces, notamment l'utilisation de RBAC et restriction d'API pour controler les acces, des politiques de réseau pour isoler les pods, et les logs d'audit et alertes pour surveiller et auditer le cluster. Cependant, certaines faiblesses subsistent, telles que la complexité de la gestion des politiques de réseau qui necessite une configuration minutieuse, et la nécessité de mises à jour régulières des outils de sécurité tels que **firewalld** ou **trivy**.
 
         - #### 5.3.3 Discussion sur les leçons apprises et les recommandations pour l'avenir
-            Les leçons apprises incluent l'importance de la planification et de l'évaluation continues des mesures de sécurité. Les recommandations pour l'avenir incluent :
-            - La mise en place d'un processus continu de surveillance et d'audit.
-            - L'adoption de nouvelles technologies de sécurité à mesure qu'elles deviennent disponibles.
-            - La formation continue des équipes sur les meilleures pratiques en matière de sécurité Kubernetes.
+            Les leçons apprises montrent que la sécurité d’un cluster Kubernetes dépend d’une approche multi-couches, combinant des politiques d’accès strictes, une surveillance proactive et des configurations de réseau renforcées. Pour les futures améliorations, il est recommandé de :
+            - Mettre en place d'un processus continu de surveillance et d'audit.
+            - Mettre en place un processus de mise à jour continue pour garder le cluster et les outils de sécurité à jour.
+            - Renforcer l’automatisation des configurations via des scripts et des outils de gestion de configuration pour faciliter la mise en œuvre des aspects de securites.
+            - Développer une stratégie de sauvegarde et de récupération pour assurer la résilience en cas de compromission.
 
     - ### Conclusion
-        Ce chapitre a présenté les tests et l'évaluation de l'architecture sécurisée, montrant une amélioration significative par rapport à l'architecture initiale. Les résultats confirment l'efficacité des mesures de sécurité mises en place.
+        Les tests et les évaluations ont confirmé que les mesures de sécurité appliquées offrent une protection robuste contre la majorité des menaces identifiées. Le renforcement de la sécurité du cluster Kubernetes s’avère efficace pour prévenir les accès non autorisés, protéger les données sensibles, et assurer une résilience face aux attaques. La stratégie adoptée et les recommandations pour l’avenir forment une base solide pour maintenir et améliorer la sécurité du cluster à long terme.
 
  
 - ## **CONCLUSION GÉNÉRALE**
