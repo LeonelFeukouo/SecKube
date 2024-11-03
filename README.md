@@ -1,12 +1,12 @@
 # **THEME : "RENFORCEMENT DE LA SECURITE D'UNE ARCHITECTURE KUBERNETES"**
 
 - ## **DÉDICACE**
-    Ce travail est dédié à mon père FOTSING Jean-Philippe et a ma mère SIMO Clementine, dont le soutien indéfectible et les encouragements m'ont permis de mener à bien ce projet.
+    Ce travail est dédié en particulier à mes parents, Monsieur FOTSING Jean-Philippe et Madame SIMO Clementine, et aux membres de ma famille en general, dont le soutien indéfectible et les encouragements m'ont permis de mener à bien mes etudes en TUNISIE.
 
 - ## **REMERCIEMENTS**
     Je tiens à exprimer ma gratitude à madame SAHAR BEN YAALA, pour son soutien, ses conseils et son aide tout au long de ce projet.
 
-    Je remercie également tous mes amis, qui m'ont accompagnee durant toutes la duree de mes etudes en Tunisie.
+    Je remercie également tous mes amis, qui m'ont accompagnee durant toutes la duree de mes etudes.
 
 
 - ## **TABLE DES MATIÈRES**
@@ -17,9 +17,7 @@
 
 - ## **LISTE DES ABRÉVIATIONS**
     - API : Application Programming Interface
-    - CI/CD : Continuous Integration/Continuous Deployment
     - RBAC : Role-Based Access Control
-    - DDoS : Distributed Denial of Service
     - etc.
 
 
@@ -31,13 +29,26 @@
     - ### Introduction
         Dans ce chapitre, nous allons introduire le projet en détaillant son contexte et ses objectifs, ainsi que la méthodologie de travail utilisée. Ce cadre nous permettra de comprendre les motivations derrière ce projet et les étapes suivies pour atteindre les résultats escomptés.
 
-    - ### 1.1 Contexte et Objectifs
-        - #### 1.1.1 Contexte du projet
+    - ### 1.1 Présentation de l'entreprise d'accueil
+        TEK-UP University est une école de formation privée en informatique crée en 2014 et agréée par le ministère de l’enseignement supérieur, de la Recherche scientifique et des technologies de l’information et de la communication en Tunisie. 
+
+        Elle est très attaché à la contribution de la qualité et de l'excellence dans tous les programmes académiques, qui se concentrent sur le développement des compétences professionnelles et la promotion de l'employabilité. Cela se traduit parla révision des programmes d'études pour s'assurer qu'ils sont conformes aux technologies et aux développements les plus récents et qu'ils sont accessibles à tous les étudiants, la fourniture d'un contenu académique de haute qualité et l'optimisation du potentiel des étudiants par la création d'un environnement qui conduit à un développement intellectuel et personnel et qui met l'accent sur la recherche académique.
+
+        Sa mission est de former des ingénieurs et de les aider à innover et à développer de nouvelles idées tout en intégrant la technologie dans leurs projets et leur programme d'études. Une compréhension plus profonde du rôle de l'ingénieur y est développée, permettant aux étudiants d'identifier les besoins du monde d'aujourd'hui et de concevoir les meilleures solutions technologiques.
+
+        Afin de réaliser sa vision et accomplir sa mission, TEK-UP se concentre principalement sur trois points :
+        - Qualité des etudes : TEK-UP offre un environnement d'apprentissage de haute qualité. L'enseignement dispensé à l'université couvre des compétences spécifiques et des méthodes scientifiques qui permettront aux diplômés d'améliorer leurs qualifications.
+        - Diverses méthodes de financement : Il existe de nombreuses façons de financer ses études à TEK-UP. Pour nous aider à nous offrir une formation adéquate quelle que soit notre situation financière, TEK-UP peut nous accorder un mode de financement spécifique qui nous permettra de payer nos études après l'obtention de notre diplôme, une fois que nous aurons décroché notre emploi.
+        - Certifications internationales : chaque étudiant a la possibilité de passer près de 12 certifications internationales telles que CCNA, CCNP, LPIC, RHCSA, CEH, etc ...
+        ![](./images/logo.png)
+        
+    - ### 1.2 Contexte et Objectifs du projet
+        - #### 1.2.1 Contexte du projet
             Avec l'adoption croissante des conteneurs pour le déploiement d'applications, Kubernetes est devenu une solution de référence pour l'orchestration des conteneurs. Cependant, cette popularité s'accompagne de nombreux défis en matière de sécurité. Les environnements Kubernetes peuvent être vulnérables à diverses menaces si des mesures de sécurité adéquates ne sont pas mises en place.
 
             Le contexte de ce projet s'inscrit dans la nécessité de renforcer la sécurité des environnements Kubernetes pour protéger les données et les applications des entreprises contre les attaques potentielles. Nous allons explorer les vulnérabilités communes et les solutions existantes pour proposer une architecture sécurisée.
 
-        - #### 1.1.2 Objectifs de la sécurisation de l'architecture Kubernetes
+        - #### 1.2.2 Objectifs de la sécurisation de l'architecture Kubernetes
             Les objectifs de ce projet sont multiples :
             - Identifier et comprendre les vulnérabilités spécifiques à Kubernetes.
             - Mettre en place une architecture Kubernetes initiale pour servir de base de comparaison.
@@ -46,8 +57,8 @@
             - Fournir des recommandations basées sur les résultats obtenus pour améliorer continuellement la sécurité dans les environnements Kubernetes.
 
 
-    - ### 1.2 Méthodologie de Travail
-        - #### 1.2.1 Explication de la méthodologie Scrum et de ses principes
+    - ### 1.3 Méthodologie de Travail
+        - #### 1.3.1 Explication de la méthodologie Scrum et de ses principes
             Scrum est une méthodologie de gestion de projet agile qui se concentre sur la réalisation de projets complexes grâce à des itérations courtes appelées sprints. Chaque sprint dure généralement entre une et quatre semaines et produit un incrément du produit potentiellement livrable. Les principaux rôles dans Scrum incluent le Product Owner, le Scrum Master et l'équipe de développement.
 
             Les principes fondamentaux de Scrum incluent :
@@ -55,13 +66,18 @@
             - **Inspection** : Les utilisateurs Scrum doivent fréquemment inspecter les artefacts Scrum et l'avancement vers un objectif de sprint pour détecter des variations indésirables.
             - **Adaptation** : Si un utilisateur Scrum détecte un ou plusieurs aspects du processus qui dévient des limites acceptables, et que le produit fini sera inacceptable, il doit ajuster le processus ou le matériel en cours.
 
-        - #### 1.2.2 Adaptation de Scrum au projet de sécurisation de l'architecture Kubernetes
+        - #### 1.3.2 Adaptation de Scrum au projet de sécurisation de l'architecture Kubernetes
             Pour ce projet, la méthodologie Scrum a été adaptée de la manière suivante :
             - **Product Owner** : Le superviseur du projet (ici, notre encadreur), responsable de la définition des priorités de sécurité et des critères d'acceptation.
             - **Scrum Master** : Le chef de projet (ici, moi), facilitant les réunions Scrum et aidant à éliminer les obstacles.
             - **Équipe de Développement** : Composée de moi uniquement, impliqué dans le projet et chargée de l'implémentation des fonctionnalités de sécurité.
 
             Les travaux ont été organisés en sprints de deux semaines, chaque sprint ayant des objectifs clairs liés à la sécurisation de l'architecture Kubernetes. Les réunions quotidiennes de stand-up ont permis de suivre les progrès et d'ajuster les plans si nécessaire.
+        
+        - #### 1.3.3 Planification du projet 
+        Gantt project
+
+        ![](./images/gantt_project.PNG)
 
     - ### Conclusion
         Ce chapitre a introduit le projet en fournissant un aperçu du contexte et des objectifs, ainsi qu'une description de la méthodologie Scrum utilisée pour structurer et gérer les travaux. Ces fondations théoriques et méthodologiques nous préparent à explorer en détail l'état de l'art de la sécurité dans les environnements Kubernetes dans le prochain chapitre.
@@ -92,21 +108,21 @@
             Les principaux défis en matière de sécurité Kubernetes incluent :
             - La gestion des accès et des permissions (RBAC).
             - La sécurisation des communications réseau entre les composants.
-            - La protection des données sensibles (comme les secrets).
+            - La protection de l'API contre des requetes provenant des source douteuses.
             - La détection et la réponse aux menaces en temps réel.
 
         - #### 2.2.2 Solutions actuelles et meilleures pratiques
             Les solutions courantes pour relever ces défis comprennent :
             - L'utilisation de Role-Based Access Control (RBAC) pour gérer les permissions.
             - L'implémentation de politiques de réseau pour restreindre les communications entre les pods.
-            - L'utilisation de Kubernetes Secrets pour stocker et gérer les informations sensibles.
+            - L'utilisation du parefeu pour restreindre l'acces a l'API.
             - La mise en place de systèmes de surveillance et d'audit pour détecter les comportements anormaux et réagir rapidement aux incidents de sécurité.
 
     - ### Conclusion
         Ce chapitre a fourni un aperçu détaillé de l'état actuel des connaissances et des pratiques en matière de sécurité Kubernetes. En identifiant les défis et les solutions existantes, nous avons établi une base solide pour la mise en œuvre pratique décrite dans les chapitres suivants.
 
  
-- ## **CHAPITRE 3 : Mise en œuvre**
+- ## **CHAPITRE 3 : Mise en place de l'architecture non securisee et test de penetration**
     - ### Introduction
         Dans ce chapitre, nous allons décrire la mise en œuvre de l'architecture non sécurisée, qui servira de base pour les tests de pénétration et l'évaluation de la sécurité.
 
