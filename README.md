@@ -22,12 +22,27 @@
 
 
 - ## **INTRODUCTION GÉNÉRALE**
-    L'architecture Kubernetes est devenue un standard pour le déploiement et la gestion des applications conteneurisées à grande échelle. Cependant, comme toute technologie puissante, elle présente des défis significatifs en matière de sécurité. Ce projet de fin d'études se concentre sur le renforcement de la sécurité d'une architecture Kubernetes en utilisant des méthodologies et des techniques spécifiques. L'objectif principal de ce projet est de développer une architecture Kubernetes sécurisée et d'évaluer son efficacité à travers des tests rigoureux. Pour atteindre cet objectif, nous avons adopté la méthodologie Scrum, permettant une approche itérative et incrémentale. Ce rapport est structuré comme suit : Le premier chapitre présente le projet, incluant son contexte, ses objectifs et la méthodologie de travail. Le deuxième chapitre est une revue de l'état de l'art concernant la sécurité dans les environnements Kubernetes. Le troisième chapitre décrit la mise en œuvre de l'architecture non sécurisée et les tests de pénétration effectués. Le quatrième chapitre traite de la sécurisation de l'architecture et le cinquième chapitre présente les tests et l'évaluation de cette architecture sécurisée. Enfin, nous conclurons par une discussion sur les résultats obtenus et les recommandations pour l'avenir.
+    Avec l'évolution rapide des technologies de conteneurisation et l’adoption croissante de l’infrastructure cloud, Kubernetes est devenu un standard de facto pour le déploiement et la gestion des applications conteneurisées à grande échelle. En tant que système d’orchestration de conteneurs, Kubernetes facilite la mise en production, l’évolutivité et la résilience des applications en distribuant automatiquement les charges de travail dans un cluster de machines physiques ou virtuelles.
 
+    Cependant, cette popularité croissante de Kubernetes s’accompagne de nouveaux défis en matière de sécurité. En raison de sa structure complexe, incluant de nombreux composants interconnectés (API, nœuds, pods, etc.), un cluster Kubernetes est vulnérable à plusieurs types de menaces, allant de l’accès non autorisé aux attaques de type escalade de privilèges. Les failles de sécurité dans l'infrastructure Kubernetes peuvent mettre en péril les applications et les données sensibles d’une organisation, rendant la sécurisation de ces environnements une priorité absolue.
+
+    Ce projet se concentre sur le renforcement de la sécurité d'une architecture Kubernetes en appliquant des méthodologies et des techniques avancées pour réduire les vulnérabilités. En s'appuyant sur les meilleures pratiques de sécurité, le projet vise à fournir une solution complète qui répond aux enjeux suivants :
+    - **Protection des accès** : Mettre en place des contrôles d’accès stricts pour prévenir les accès non autorisés.
+    - **Isolation des composants** : Utiliser des politiques de réseau et de sécurité des pods pour segmenter l'infrastructure et limiter la portée des éventuelles intrusions.
+    - **Surveillance et audit** : Intégrer des mécanismes de surveillance pour détecter et réagir aux comportements suspects en temps réel.
+
+    Pour atteindre ces objectifs, nous avons adopté une approche basée sur la méthodologie agile Scrum, permettant un déploiement progressif des fonctionnalités de sécurité et une amélioration continue grâce aux retours obtenus à chaque itération. Ce rapport est structuré en plusieurs chapitres, chacun décrivant une étape clé du projet :
+    1. Le premier chapitre présente le contexte, les objectifs du projet, et la méthodologie de travail.
+    2. Le deuxième chapitre dresse un état de l’art des pratiques de sécurité dans Kubernetes, identifiant les défis et solutions actuels.
+    3. Le troisième chapitre détaille la mise en place d'une architecture non sécurisée pour identifier les vulnérabilités potentielles par le biais de tests de pénétration.
+    4. Le quatrième chapitre expose les mesures de sécurisation appliquées pour renforcer la protection du cluster.
+    5. Enfin, le cinquième chapitre présente les tests finaux et l’évaluation des résultats obtenus, permettant de vérifier l'efficacité des mesures mises en place.
+
+    Ce projet vise à établir un environnement Kubernetes résilient et sécurisé, offrant ainsi un modèle applicable aux infrastructures conteneurisées pour prévenir les risques de sécurité et garantir l'intégrité des applications déployées.
 
 - ## **CHAPITRE 1 : Présentation du Projet**
     - ### Introduction
-        Dans ce chapitre, nous allons introduire le projet en détaillant son contexte et ses objectifs, ainsi que la méthodologie de travail utilisée. Ce cadre nous permettra de comprendre les motivations derrière ce projet et les étapes suivies pour atteindre les résultats escomptés.
+        Dans ce chapitre, nous posons les fondations du projet en détaillant son contexte, ses objectifs et la méthodologie adoptée. Nous abordons la problématique centrale à laquelle ce projet répond, ainsi que la solution proposée pour sécuriser une architecture Kubernetes. Ce chapitre décrit également les besoins fonctionnels et non fonctionnels du projet et présente une planification structurée suivant une approche itérative.
 
     - ### 1.1 Présentation de l'entreprise d'accueil
         TEK-UP University est une école de formation privée en informatique crée en 2014 et agréée par le ministère de l’enseignement supérieur, de la Recherche scientifique et des technologies de l’information et de la communication en Tunisie. 
@@ -55,10 +70,36 @@
             - Appliquer des techniques et des outils de sécurité pour renforcer cette architecture.
             - Évaluer l'efficacité des mesures de sécurité mises en place à travers des tests de pénétration.
             - Fournir des recommandations basées sur les résultats obtenus pour améliorer continuellement la sécurité dans les environnements Kubernetes.
+        
+    - ### 1.3 Problématique
+        L'utilisation de Kubernetes apporte des avantages considérables en termes d'agilité et de scalabilité, mais expose aussi les systèmes à de nouveaux types de menaces. En effet, les infrastructures Kubernetes non sécurisées peuvent devenir des cibles privilégiées pour des cyberattaques, menaçant ainsi l’intégrité des applications et la confidentialité des données. La problématique centrale de ce projet est donc : **Comment sécuriser efficacement un cluster Kubernetes pour le protéger contre les menaces internes et externes tout en maintenant sa performance et sa disponibilité ?**
+    
+    - ### 1.4 Solution proposée
+        Pour répondre à cette problématique, nous proposons une solution de sécurité complète qui se compose de :
+        - **Contrôles d'accès stricts** (RBAC) : Limitation des permissions des utilisateurs et des applications pour minimiser les risques d'accès non autorisé.
+        - **Politiques de réseau** : Isolation des différents composants et services au sein du cluster pour éviter le mouvement latéral des menaces.
+        - **Sécurisation de l’API Kubernetes** : Mise en place de méthodes de surveillance des accès à l'API, point d’entrée critique du cluster.
+        - **Analyse des images de pods** : Utiliser des outils adequats, afin de detecter des vulnerabilites dans les images.
+        - **Surveillance et audit** : Intégration d’outils de surveillance et d’audit pour détecter rapidement les comportements anormaux et faciliter la réponse aux incidents.
 
+        Ces mesures permettent de renforcer la sécurité du cluster tout en maintenant les performances et l’agilité de l’infrastructure.
+    
+    - ### 1.5 Identification des besoins fonctionnels et non fonctionnels
+        - #### 1.5.1 Besoins fonctionnels
+            Les besoins fonctionnels représentent les exigences directes pour assurer la sécurité du cluster Kubernetes :
+            - **Contrôle d'accès basé sur les rôles (RBAC)** : Gestion des permissions afin que chaque utilisateur ait uniquement les droits nécessaires pour effectuer ses tâches.
+            - **Politiques de réseau** : Implémentation de règles de réseau pour restreindre la communication entre les pods.
+            - **Protection de l'API** : Configuration du parefeu pour restreindre l'acces au personnes autorisée.
+            - **Surveillance et audit** : Mise en place de journaux d'audit détaillés et de systèmes d'alerte pour détecter les accès non autorisés et autres anomalies.
 
-    - ### 1.3 Méthodologie de Travail
-        - #### 1.3.1 Explication de la méthodologie Scrum et de ses principes
+        - #### 1.5.2 Besoins non fonctionnels
+            Les besoins non fonctionnels représentent les caractéristiques attendues en matière de performance et de résilience du système :
+            - **Disponibilité** : Le cluster doit rester opérationnel, même en cas d'attaque ou d'incident de sécurité.
+            - **Intégrité des données** : Les informations manipulées et stockées dans le cluster doivent être protégées contre toute modification non autorisée.
+            - **Auditabilité** : Capacité de suivre les actions des utilisateurs et de fournir un historique détaillé des événements pour les besoins de conformité et de sécurité.
+
+    - ### 1.6 Méthodologie de Travail
+        - #### 1.6.1 Explication de la méthodologie Scrum et de ses principes
             Scrum est une méthodologie de gestion de projet agile qui se concentre sur la réalisation de projets complexes grâce à des itérations courtes appelées sprints. Chaque sprint dure généralement entre une et quatre semaines et produit un incrément du produit potentiellement livrable. Les principaux rôles dans Scrum incluent le Product Owner, le Scrum Master et l'équipe de développement.
 
             Les principes fondamentaux de Scrum incluent :
@@ -66,29 +107,41 @@
             - **Inspection** : Les utilisateurs Scrum doivent fréquemment inspecter les artefacts Scrum et l'avancement vers un objectif de sprint pour détecter des variations indésirables.
             - **Adaptation** : Si un utilisateur Scrum détecte un ou plusieurs aspects du processus qui dévient des limites acceptables, et que le produit fini sera inacceptable, il doit ajuster le processus ou le matériel en cours.
 
-        - #### 1.3.2 Adaptation de Scrum au projet de sécurisation de l'architecture Kubernetes
+        - #### 1.6.2 Adaptation de Scrum au projet de sécurisation de l'architecture Kubernetes
             Pour ce projet, la méthodologie Scrum a été adaptée de la manière suivante :
             - **Product Owner** : Le superviseur du projet (ici, notre encadreur), responsable de la définition des priorités de sécurité et des critères d'acceptation.
             - **Scrum Master** : Le chef de projet (ici, moi), facilitant les réunions Scrum et aidant à éliminer les obstacles.
             - **Équipe de Développement** : Composée de moi uniquement, impliqué dans le projet et chargée de l'implémentation des fonctionnalités de sécurité.
 
-            Les travaux ont été organisés en sprints de deux semaines, chaque sprint ayant des objectifs clairs liés à la sécurisation de l'architecture Kubernetes. Les réunions quotidiennes de stand-up ont permis de suivre les progrès et d'ajuster les plans si nécessaire.
+            Les travaux ont été organisés en sprints allant de une a quatre semaines, chaque sprint ayant des objectifs clairs liés à la sécurisation de l'architecture Kubernetes. Les réunions ont permis de suivre les progrès et d'ajuster les plans si nécessaire.
         
-        - #### 1.3.3 Planification du projet 
-        Gantt project
+        - #### 1.6.3 Planification du projet 
+            La méthodologie Scrum a été choisie pour structurer et suivre le déroulement du projet. En utilisant des cycles itératifs (sprints), cette approche permet de tester et d'améliorer les fonctionnalités de sécurité au fur et à mesure, garantissant ainsi une progression continue vers une architecture Kubernetes sécurisée.
 
-        ![](./images/gantt_project.PNG)
+            **Phases du projet** :
+            1. **Sprint 1 - Configuration de l’architecture initiale** : Mise en place d’un cluster Kubernetes de base pour identifier les vulnérabilités potentielles.
+            2. **Sprint 2 - Test de pénétration** : Simulation d’attaques pour évaluer les risques et identifier les points faibles de l'architecture.
+            3. **Planification des fonctionnalités de securité** : Identifier tous les points de securité a mettre en place.
+            4. **Sprint 3 - Mise en œuvre des mesures de sécurité** : Application des solutions de sécurité telles que RBAC, Network Policies, et restrictions API.
+            5. **Sprint 4 - Surveillance et évaluation** : Intégration de la surveillance continue et évaluation des performances et de la sécurité de l’architecture renforcée.
+
+            Cette planification en sprints permet d’évaluer chaque étape, d’ajuster les configurations en fonction des résultats des tests.
+
+            Le diagramme de GANTT suivant montre l'evolution de notre projet au fil du temps.
+            ![](./images/gantt_project.PNG)
 
     - ### Conclusion
-        Ce chapitre a introduit le projet en fournissant un aperçu du contexte et des objectifs, ainsi qu'une description de la méthodologie Scrum utilisée pour structurer et gérer les travaux. Ces fondations théoriques et méthodologiques nous préparent à explorer en détail l'état de l'art de la sécurité dans les environnements Kubernetes dans le prochain chapitre.
+
+        Ce premier chapitre introduit les éléments de base du projet, en mettant en évidence les objectifs, la problématique, et les solutions envisagées pour sécuriser une architecture Kubernetes. La méthodologie Scrum, couplée à des sprints bien définis, offrira un cadre structuré pour mener à bien ce projet. Ces fondations théoriques et méthodologiques nous préparent à explorer en détail l'état de l'art de la sécurité dans les environnements Kubernetes dans le prochain chapitre.
  
 - ## **CHAPITRE 2 : État de l'art**
     - ### Introduction
-        Le chapitre suivant présente une revue de la littérature existante sur la sécurité dans les environnements Kubernetes. Cette revue permet de situer notre projet dans le contexte des recherches et pratiques actuelles et d'identifier les principaux défis et solutions existantes.
+
+        Le déploiement de Kubernetes dans des environnements de production pose des défis de sécurité uniques en raison de la complexité et de l’échelle de cette infrastructure. La sécurité dans Kubernetes requiert une compréhension approfondie des menaces potentielles, des vulnérabilités, et des pratiques les plus récentes pour protéger les clusters. Dans ce chapitre, nous examinons la littérature et les recherches actuelles en matière de sécurité Kubernetes, identifions les principaux défis, et discutons des solutions et meilleures pratiques recommandées dans l’industrie pour garantir une architecture résiliente.
 
     - ### 2.1 Revue de la littérature sur la sécurité dans les environnements Kubernetes
         - #### 2.1.1 Études académiques et recherches
-            Plusieurs études académiques et recherche ont exploré les vulnérabilités et les défis de sécurité associés à Kubernetes. C'est le cas du guide de cours, pour la certification professionnelle "Certified Kubernetes Security Specialist" elabore par **Benjamin Muschko**, permettant :
+            Plusieurs études académiques et recherches ont exploré les vulnérabilités et les défis de sécurité associés à Kubernetes. C'est le cas du guide de cours, pour la certification professionnelle "Certified Kubernetes Security Specialist" elabore par **Benjamin Muschko**, permettant :
             -   d'identifier, atténuer et/ou minimiser les menaces pesant sur les applications natives du cloud et les clusters Kubernetes; 
             - apprendre les tenants et les aboutissants des fonctions de sécurité de Kubernetes et des outils externes pour la détection et l'atténuation de la sécurité; 
             - démontrer les compétences nécessaires pour assumer les responsabilités d'un administrateur Kubernetes ou d'un développeur d'applications du point de vue de la sécurité;
@@ -99,32 +152,37 @@
         - #### 2.1.2 Articles et livres blancs de l'industrie
             En plus des recherches académiques, de nombreux articles et livres blancs publiés par des experts de l'industrie offrent des perspectives pratiques sur la sécurité Kubernetes. Des entreprises comme Google, Red Hat, et AWS ont publié des guides de meilleures pratiques et des études de cas détaillant les mesures de sécurité efficaces dans les environnements Kubernetes.
 
-            Par exemple, le rapport d'etude de RedHat menée auprès de 600 professionnels du DevOps, intitulé "The state of Kubernetes security report: 2024 edition" examine certains des défis les plus courants en matière de sécurité cloud-native et les impacts commerciaux que les organisations de toutes tailles rencontrent aujourd'hui et propose des mesures que vous pouvez prendre pour renforcer la sécurité de vos environnements cloud-native.
+            Par exemple, le rapport d'etude de RedHat menée auprès de 600 professionnels du DevOps, intitulé **The state of Kubernetes security report: 2024 edition** examine certains des défis les plus courants en matière de sécurité cloud-native et les impacts commerciaux que les organisations de toutes tailles rencontrent aujourd'hui et propose des mesures que nous pouvons prendre pour renforcer la sécurité de nos environnements cloud-native.
 
             https://www.redhat.com/en/engage/state-kubernetes-security-report-2024
 
     - ### 2.2 Présentation des principaux défis et des solutions existantes
         - #### 2.2.1 Défis courants en sécurité Kubernetes
-            Les principaux défis en matière de sécurité Kubernetes incluent :
-            - La gestion des accès et des permissions (RBAC).
-            - La sécurisation des communications réseau entre les composants.
-            - La protection de l'API contre des requetes provenant des source douteuses.
-            - La détection et la réponse aux menaces en temps réel.
+            Plusieurs défis spécifiques sont liés à la sécurisation d'un cluster Kubernetes en raison de sa complexité et de son échelle. Il s'agit de :
+            - **La gestion des accès et des permissions (RBAC)** : Kubernetes manque de mécanismes de gestion d'acces natifs, ce qui peut rendre complexe le contrôle des permissions pour les utilisateurs et services externes.
+            - **La sécurisation des communications réseau entre les composants** : Par défaut, les pods dans Kubernetes peuvent communiquer librement entre eux, ce qui augmente les risques de mouvement latéral en cas de compromission d’un pod.
+            - **La protection de l'API contre des requetes provenant des source douteuses** : Kubernetes ne delimite pas les requetes qu'il traite lorsquil les recoit, meme si elle proviennent d'internet.
+            - **La détection et la réponse aux menaces en temps réel** : dans un environnement dynamique comme Kubernetes, il est difficile de maintenir une surveillance continue et de réagir rapidement aux anomalies ou aux attaques.
+
 
         - #### 2.2.2 Solutions actuelles et meilleures pratiques
-            Les solutions courantes pour relever ces défis comprennent :
-            - L'utilisation de Role-Based Access Control (RBAC) pour gérer les permissions.
-            - L'implémentation de politiques de réseau pour restreindre les communications entre les pods.
-            - L'utilisation du parefeu pour restreindre l'acces a l'API.
-            - La mise en place de systèmes de surveillance et d'audit pour détecter les comportements anormaux et réagir rapidement aux incidents de sécurité.
+            Pour répondre aux défis de sécurité identifiés, plusieurs solutions et bonnes pratiques sont recommandées et adoptées dans les environnements Kubernetes modernes. Il s'agit de :
+            - **Role-Based Access Control (RBAC)** : Permet de gérer les permissions en fonction des rôles d’utilisateurs, garantissant que seuls les utilisateurs autorisés peuvent accéder aux ressources critiques.
+            - **Network Policies** : Les politiques de réseau permettent de segmenter les flux de données au sein du cluster, en limitant la communication entre les pods et en isolant les composants critiques.
+            - **Restriction d'API** : La mise en place d'un firewall est importante, afin de decider de qui peut acceder l'API kubernetes ou non.
+            - **Surveillance et audit** : L’intégration d’outils de surveillance et d’audit tels que Falco et Log Backend de Kubernetes est essentielle pour suivre les activités en temps réel, identifier les comportements anormaux et réagir aux incidents.
+        
+    - ### 2.3 Synthèse et positionnement du projet
+        L’état de l’art révèle que, bien que Kubernetes dispose d'outils et de mécanismes de sécurité, des améliorations significatives sont encore nécessaires pour atteindre un niveau de sécurité optimal. Les failles identifiées, telles que l'accès non sécurisé aux pods et le manque de contrôle d'accès centralisé, constituent des risques importants pour les environnements en production.
+
+        Le projet de sécurisation présenté dans ce rapport s'appuie sur les pratiques actuelles et les recommandations de l’industrie pour développer une solution robuste et intégrée qui réduit les vulnérabilités. En adoptant des mesures comme RBAC, les politiques de réseau, la protection de l'API, et des systèmes de surveillance, notre approche vise à combler les lacunes identifiées dans l’état de l’art et à fournir une architecture Kubernetes plus résiliente.
 
     - ### Conclusion
-        Ce chapitre a fourni un aperçu détaillé de l'état actuel des connaissances et des pratiques en matière de sécurité Kubernetes. En identifiant les défis et les solutions existantes, nous avons établi une base solide pour la mise en œuvre pratique décrite dans les chapitres suivants.
-
+        Ce chapitre a permis de passer en revue les recherches et pratiques existantes en matière de sécurité Kubernetes, en mettant en lumière les principaux défis auxquels font face les entreprises qui déploient cette technologie. Les solutions et meilleures pratiques décrites serviront de cadre de référence pour la mise en œuvre des mesures de sécurité dans le projet. Dans le prochain chapitre, nous aborderons la mise en place d'une architecture non sécurisée de Kubernetes, qui servira de base pour identifier les vulnérabilités et tester les différentes solutions de sécurité proposées.
  
 - ## **CHAPITRE 3 : Mise en place de l'architecture non securisee et test de penetration**
     - ### Introduction
-        Dans ce chapitre, nous allons décrire la mise en œuvre de l'architecture non sécurisée, qui servira de base pour les tests de pénétration et l'évaluation de la sécurité.
+        Dans ce chapitre, nous mettons en place une architecture Kubernetes initiale sans mesures de sécurité spécifiques. L'objectif est de configurer un cluster minimaliste, représentatif des environnements de production, mais délibérément vulnérable pour permettre l'identification des failles potentielles. Cette première étape est essentielle pour tester la résilience de l’infrastructure face aux attaques et pour observer les points faibles de l’architecture Kubernetes avant l'implémentation des mesures de sécurité. Les résultats de ces tests de pénétration serviront de référence pour évaluer l'efficacité des solutions de sécurité appliquées dans les chapitres suivants.
 
     - ### 3.1 Développement de l'architecture non sécurisée
         - #### 3.1.1 Mise en place de l'architecture initiale (Master et Workers)
@@ -824,11 +882,11 @@
 
             
     - ### Conclusion
-        Ce chapitre a décrit le développement et le déploiement de l'architecture non sécurisée, ainsi que les résultats des tests de pénétration initiaux. Ces résultats serviront de référence pour la mise en œuvre des mesures de sécurité décrites dans le prochain chapitre.
+        Les tests de pénétration effectués sur l'architecture non sécurisée ont permis de mettre en évidence plusieurs vulnérabilités critiques au sein du cluster Kubernetes, notamment l'accès non restreint aux services et la communication non sécurisée entre les pods. Ces résultats confirment la nécessité de renforcer la sécurité du cluster en implémentant des politiques d’accès strictes, des contrôles de réseau, et une protection de l'API. Cette analyse approfondie des vulnérabilités nous offre une base solide pour définir et prioriser les mesures de sécurisation abordées dans le chapitre suivant.
  
 - ## **CHAPITRE 4 : Sécurisation de l'architecture**
     - ### Introduction
-        Ce chapitre se concentre sur la sécurisation de l'architecture Kubernetes initiale en appliquant des mesures de sécurité recommandées.
+        Ce chapitre se concentre sur la mise en œuvre des mesures de sécurité nécessaires pour renforcer l'architecture Kubernetes initiale. Après avoir identifié les vulnérabilités dans le chapitre précédent, il est essentiel d'appliquer des solutions robustes pour protéger le cluster contre les menaces internes et externes. Nous aborderons les différentes techniques de sécurisation, y compris l'implémentation de contrôles d'accès basés sur les rôles (RBAC), la configuration des politiques de réseau, et la sécurisation de l'API Kubernetes. 
 
     - ### 4.1 Planification des fonctionnalités de sécuritee à implémenter dans les sprints
         Pour garantir une approche itérative et progressive de la sécurisation du cluster Kubernetes, nous avons planifié les fonctionnalités de sécurité à implémenter en plusieurs sprints, en suivant la méthodologie Scrum. Les priorités ont été définies en fonction des vulnérabilités critiques identifiées lors des tests de pénétration, et chaque fonctionnalité de sécurité sera associée à des critères d'acceptation clairs pour valider son implémentation.
@@ -1313,7 +1371,5 @@
 - ## **BIBLIOGRAPHIE**
 
 - ## **RÉSUMÉ**
-    Ce projet de fin d'études vise à renforcer la sécurité d'une architecture Kubernetes en appliquant des mesures spécifiques et en évaluant leur efficacité. La méthodologie Scrum a été utilisée pour structurer le travail, et les résultats montrent une amélioration significative de la sécurité globale. Ce rapport présente les détails du projet, y compris le contexte, les objectifs, la mise en œuvre, et les résultats des tests de sécurité.
 
 - ## **ABSTRACT**
-    This final project aims to enhance the security of a Kubernetes architecture by implementing specific measures and evaluating their effectiveness. The Scrum methodology was used to structure the work, and the results show a significant improvement in overall security. This report details the project, including the context, objectives, implementation, and security test results.
