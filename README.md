@@ -1,17 +1,5 @@
 # **THEME : "RENFORCEMENT DE LA SECURITE D'UNE ARCHITECTURE KUBERNETES"**
 
-- ## **TABLE DES MATIÈRES**
-
-- ## **TABLE DES FIGURES**
-
-- ## **LISTE DES TABLEAUX**
-
-- ## **LISTE DES ABRÉVIATIONS**
-    - API : Application Programming Interface
-    - RBAC : Role-Based Access Control
-    - etc.
-
-
 - ## **INTRODUCTION GÉNÉRALE**
     Avec l'évolution rapide des technologies de conteneurisation et l’adoption croissante de l’infrastructure cloud, Kubernetes est devenu un standard de facto pour le déploiement et la gestion des applications conteneurisées à grande échelle. En tant que système d’orchestration de conteneurs, Kubernetes facilite la mise en production, l’évolutivité et la résilience des applications en distribuant automatiquement les charges de travail dans un cluster de machines physiques ou virtuelles.
 
