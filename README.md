@@ -1345,10 +1345,24 @@
 
  
 - ## **CONCLUSION GÉNÉRALE**
-    Ce rapport a détaillé le projet de renforcement de la sécurité d'une architecture Kubernetes, en utilisant une méthodologie Scrum pour structurer le travail. À travers une série de tests et d'évaluations, nous avons démontré l'efficacité des mesures de sécurité mises en place. Les principaux résultats montrent une amélioration significative de la sécurité, avec une réduction notable des vulnérabilités et une meilleure protection des données et des applications. Ce projet souligne l'importance de la sécurité dans les environnements Kubernetes et propose des recommandations pour les futures améliorations. Nous espérons que ce rapport contribuera à une meilleure compréhension des défis de sécurité dans les environnements Kubernetes et servira de guide pour les professionnels cherchant à renforcer la sécurité de leurs déploiements.
+    Ce projet a permis de renforcer la sécurité d’une architecture Kubernetes en appliquant des pratiques rigoureuses de sécurisation adaptées aux infrastructures conteneurisées. Dans un contexte où
+l’adoption de Kubernetes est en pleine croissance, garantir la protection des clusters est essentiel pour assurer la continuité des applications et la confidentialité des données.
+    En suivant une méthodologie agile, notamment Scrum, nous avons structuré les différentes étapes du projet pour répondre aux objectifs de sécurité de manière progressive et itérative. Après une première phase de configuration d’une architecture non sécurisée et de tests de pénétration, les vulnérabilités critiques ont été identifiées, soulignant l’importance de mettre en place des mesures
+de sécurité solides. En intégrant des solutions de contrôle d’accès, des politiques de réseau, et des mécanismes de surveillance, le projet a permis de transformer un environnement vulnérable en un
+système résilient et robuste contre les menaces.
+    Les résultats des tests finaux montrent une réduction significative des risques initiaux et valident l’efficacité des mesures de sécurité appliquées. Le cluster est désormais mieux protégé contre les accès
+non autorisés, les escalades de privilèges, et les attaques potentielles visant les composants critiques de Kubernetes. Par ailleurs, l’intégration de la surveillance et de l’audit en continu assure une réactivité face aux comportements suspects, permettant de prévenir les incidents de sécurité.
+    En conclusion, ce projet propose un modèle de sécurité adaptable aux infrastructures Kubernetes modernes, répondant aux besoins de protection des environnements de production. Les leçons apprises
+et les mesures appliquées dans ce projet peuvent servir de référence pour d’autres initiatives visant la sécurisation des environnements conteneurisés. La sécurité est un processus continu, et ce travail
+constitue une base solide pour des améliorations futures, au fur et à mesure de l’évolution des menaces et des technologies.
 
 - ## **BIBLIOGRAPHIE**
 
 - ## **RÉSUMÉ**
+    Face à la popularité croissante de Kubernetes pour gérer les applications conteneurisées, la sécurité devient cruciale. Kubernetes facilite la gestion d’applications à grande échelle, mais sa complexité le rend vulnérable aux menaces, comme l’accès non autorisé et l’escalade de privilèges.
+    Ce projet vise à sécuriser une architecture Kubernetes en appliquant des pratiques de sécurité robustes. Après avoir mis en place une architecture non sécurisée et mené des tests de pénétration révélant
+des vulnérabilités, des solutions telles que le contrôle d’accès (RBAC), les politiques réseau, et la sécurisation de l’API ont été intégrées. Un système de surveillance continue a aussi été ajouté pour
+détecter rapidement les activités suspectes.
+    Les résultats montrent une réduction des vulnérabilités et confirment l’efficacité des mesures appliquées pour renforcer la sécurité du cluster Kubernetes. Ce projet propose ainsi un modèle applicable aux infrastructures conteneurisées modernes, permettant de protéger les applications et les données.
 
 - ## **ABSTRACT**
