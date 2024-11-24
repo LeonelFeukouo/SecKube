@@ -1,14 +1,5 @@
 # **THEME : "RENFORCEMENT DE LA SECURITE D'UNE ARCHITECTURE KUBERNETES"**
 
-- ## **DÉDICACE**
-    Ce travail est dédié en particulier à mes parents, Monsieur FOTSING Jean-Philippe et Madame SIMO Clementine, et aux membres de ma famille en general, dont le soutien indéfectible et les encouragements m'ont permis de mener à bien mes etudes en TUNISIE.
-
-- ## **REMERCIEMENTS**
-    Je tiens à exprimer ma gratitude à madame SAHAR BEN YAALA, pour son soutien, ses conseils et son aide tout au long de ce projet.
-
-    Je remercie également tous mes amis, qui m'ont accompagnee durant toutes la duree de mes etudes.
-
-
 - ## **TABLE DES MATIÈRES**
 
 - ## **TABLE DES FIGURES**
